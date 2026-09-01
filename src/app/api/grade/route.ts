@@ -6,6 +6,7 @@ import { assertBillingReady } from "@/lib/billing-guard";
 import { rateLimit } from "@/lib/rate-limit";
 import { processUpload } from "@/lib/uploads";
 import { gradeSubmission } from "@/lib/grading/service";
+import { UnreadableImageError } from "@/lib/grading/normalize";
 import type { ImagePart } from "@/lib/grading/llm";
 import { track } from "@/lib/analytics";
 
@@ -267,6 +268,26 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ attemptId: attempt.id, assignmentId });
   } catch (err) {
+    // Unreadable photo(s): fail the attempt, name the pages, DO NOT charge.
+    if (err instanceof UnreadableImageError) {
+      await admin
+        .from("grading_attempts")
+        .update({
+          status: "failed",
+          error_message: err.studentMessage.slice(0, 500),
+        })
+        .eq("id", attempt.id);
+
+      return NextResponse.json(
+        {
+          error: err.studentMessage,
+          code: "unreadable_image",
+          images: err.images,
+        },
+        { status: 422 },
+      );
+    }
+
     await admin
       .from("grading_attempts")
       .update({

@@ -2,16 +2,24 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { GradeHero } from "@/components/grade-hero";
-import { DraftProgression } from "@/components/draft-progression";
 import { ScoringBasisBadge } from "@/components/scoring-basis-badge";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { DISCLAIMER } from "@/lib/grading/schema";
 import { totalPointsEarned, totalPointsPossible, round } from "@/lib/grading/grade-math";
+import { gradeColors } from "@/lib/grade-colors";
 import type { GradingAttempt, Assignment } from "@/lib/types";
 
 export const metadata = { title: "Your estimated grade" };
 export const dynamic = "force-dynamic";
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
+      {children}
+    </h2>
+  );
+}
 
 export default async function ResultsPage({
   params,
@@ -37,9 +45,11 @@ export default async function ResultsPage({
       <Shell userId={user.id}>
         <div className="card text-center">
           <h1 className="text-xl font-semibold text-ink">Grading didn&apos;t finish</h1>
-          <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
             {attempt.error_message ||
-              "Something went wrong while grading this submission."}{" "}
+              "Something went wrong while grading this submission."}
+          </p>
+          <p className="mt-2 text-xs text-ink-muted">
             Your grading credit was not used.
           </p>
           <Link href={`/grade?assignment=${assignment.id}`} className="btn-primary mt-4">
@@ -62,31 +72,36 @@ export default async function ResultsPage({
   }
 
   const r = attempt.result;
-
-  const { data: siblings } = await supabase
-    .from("grading_attempts")
-    .select("id, draft_number, score, letter_grade, status")
-    .eq("assignment_id", assignment.id)
-    .eq("status", "complete")
-    .order("draft_number", { ascending: true })
-    .returns<Pick<GradingAttempt, "id" | "draft_number" | "score" | "letter_grade" | "status">[]>();
-
-  const grammar = r.grammar_or_citation_issues ?? [];
-  const written = r.written_response_feedback ?? [];
+  const grammar = (r.grammar_or_citation_issues ?? []).slice(0, 4);
+  const written = (r.written_response_feedback ?? []).slice(0, 4);
+  const thingsToFix = [...r.things_to_fix]
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, 5);
+  const strengths = (r.strengths ?? []).slice(0, 3);
   const pointsPossible = totalPointsPossible(r.sections);
   const pointsEarned = totalPointsEarned(r.sections);
 
   return (
     <Shell userId={user.id}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">
+          <h1 className="text-xl font-bold tracking-tight text-ink">
             {assignment.title}
           </h1>
           <p className="text-sm text-ink-muted">
-            Draft {attempt.draft_number}
-            {assignment.course ? ` · ${assignment.course}` : ""} ·{" "}
-            {new Date(attempt.created_at).toLocaleDateString()}
+            {assignment.course ? `${assignment.course} · ` : ""}
+            {new Date(attempt.created_at).toLocaleDateString(undefined, {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}
+            {" · "}
+            <Link
+              href={`/dashboard/assignments/${assignment.id}`}
+              className="underline-offset-2 hover:text-ink hover:underline"
+            >
+              history &amp; settings
+            </Link>
           </p>
         </div>
         <Link href="/dashboard" className="btn-ghost">
@@ -96,7 +111,7 @@ export default async function ResultsPage({
 
       {/* GRADE HERO */}
       <div className="card">
-        <div className="rounded-xl bg-surface-subtle py-4">
+        <div className="rounded-xl bg-surface-subtle py-2">
           <GradeHero
             letter={r.letter_grade}
             score={r.score}
@@ -105,108 +120,85 @@ export default async function ResultsPage({
           />
         </div>
 
-        {/* Strong estimate disclaimer — directly under the grade */}
-        <p className="mt-4 text-center text-sm leading-relaxed text-ink-soft">
+        <p className="mx-auto mt-4 max-w-xl text-center text-xs leading-relaxed text-ink-muted">
           {r.disclaimer || DISCLAIMER}
         </p>
 
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <ScoringBasisBadge basis={r.scoring_basis} />
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-ink-muted">
+          <ScoringBasisBadge basis={r.scoring_basis} small />
           {pointsPossible > 0 && (
-            <span className="rounded-full bg-surface-raised px-3 py-1 text-xs font-medium text-ink-soft">
+            <span>
               {round(pointsEarned, 1)} / {round(pointsPossible, 1)} points
             </span>
           )}
+          {r.grading_basis_note && (
+            <span className="basis-full text-center">{r.grading_basis_note}</span>
+          )}
         </div>
-
-        {r.grading_basis_note && (
-          <p className="mt-3 text-center text-xs text-ink-muted">
-            {r.grading_basis_note}
-          </p>
-        )}
-
-        {r.inferred_rubric && (
-          <p className="mt-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-            Some or all of this scoring was AI-inferred because no complete rubric
-            or answer key was provided. Treat these numbers as a loose guide.
-          </p>
-        )}
       </div>
 
-      {siblings && siblings.length > 1 && (
-        <div className="mt-6">
-          <DraftProgression
-            drafts={siblings}
-            currentId={attempt.id}
-            assignmentId={assignment.id}
-          />
-        </div>
-      )}
-
-      {/* THINGS TO FIX */}
-      <section className="mt-8">
-        <h2 className="text-lg font-bold uppercase tracking-wide text-ink">
-          Things to fix
-        </h2>
-        <div className="mt-3 space-y-3">
-          {r.things_to_fix.map((t) => (
-            <div key={t.priority} className="card">
-              <div className="flex items-start gap-3">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand-100 text-sm font-bold text-brand-700">
-                  {t.priority}
-                </span>
-                <div>
+      {/* TOP THINGS TO FIX */}
+      <section className="mt-7">
+        <SectionLabel>Top things to fix</SectionLabel>
+        <ol className="space-y-2.5">
+          {thingsToFix.map((t, i) => (
+            <li key={t.priority} className="card flex gap-3 p-4">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-brand-100 text-xs font-bold text-brand-700">
+                {i + 1}
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline gap-x-2">
                   <h3 className="font-semibold text-ink">{t.title}</h3>
-                  <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-ink-muted">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
                     {t.location}
-                  </p>
-                  <p className="mt-2 text-sm text-ink-soft">{t.explanation}</p>
-                  <p className="mt-2 text-sm text-ink-soft">
-                    <span className="font-medium text-ink">Do this: </span>
-                    {t.suggestion}
-                  </p>
+                  </span>
                 </div>
+                <p className="mt-1 text-sm text-ink-soft">{t.explanation}</p>
+                <p className="mt-1 text-sm text-ink">
+                  <span className="font-semibold text-brand-400">Fix: </span>
+                  {t.suggestion}
+                </p>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
 
-      {/* SECTION / RUBRIC BREAKDOWN */}
+      {/* RUBRIC BREAKDOWN */}
       {r.sections.length > 0 && (
-        <section className="mt-8">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-bold uppercase tracking-wide text-ink">
+        <section className="mt-7">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
               {r.scoring_basis === "rubric" ? "Rubric breakdown" : "Breakdown"}
             </h2>
-            <span className="text-sm text-ink-muted">
-              {round(pointsEarned, 1)} / {round(pointsPossible, 1)} pts
+            <span className="text-xs text-ink-muted">
+              {round(pointsEarned, 1)} / {round(pointsPossible, 1)}
             </span>
           </div>
-          <div className="mt-3 space-y-3">
+          <div className="card divide-y divide-line p-0">
             {r.sections.map((c, i) => {
               const pct =
                 c.points_possible > 0
                   ? (c.points_earned / c.points_possible) * 100
                   : 0;
+              const gc = gradeColors(pct);
               return (
-                <div key={i} className="card">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-semibold text-ink">{c.name}</h3>
-                    <div className="flex items-center gap-2">
-                      <ScoringBasisBadge basis={c.scoring_basis} small />
-                      <span className="shrink-0 text-sm font-semibold text-ink-soft">
-                        {round(c.points_earned, 1)} / {round(c.points_possible, 1)}
-                      </span>
-                    </div>
+                <div key={i} className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-ink">{c.name}</h3>
+                    <span className="shrink-0 text-sm font-semibold text-ink-soft">
+                      {round(c.points_earned, 1)} / {round(c.points_possible, 1)}
+                    </span>
                   </div>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-raised">
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
                     <div
-                      className="h-full rounded-full bg-brand-500"
-                      style={{ width: `${Math.max(2, Math.min(100, pct))}%` }}
+                      className={`h-full rounded-full ${gc.bar}`}
+                      style={{ width: `${Math.max(3, Math.min(100, pct))}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-sm text-ink-soft">{c.feedback}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+                    {c.feedback}
+                  </p>
                 </div>
               );
             })}
@@ -216,25 +208,20 @@ export default async function ResultsPage({
 
       {/* WRITTEN RESPONSE FEEDBACK */}
       {written.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-lg font-bold uppercase tracking-wide text-ink">
-            Written response feedback
-          </h2>
-          <div className="mt-3 space-y-3">
+        <section className="mt-7">
+          <SectionLabel>Written responses</SectionLabel>
+          <div className="card divide-y divide-line p-0">
             {written.map((w, i) => (
-              <div key={i} className="card">
+              <div key={i} className="p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold text-ink">{w.label}</h3>
+                  <h3 className="text-sm font-semibold text-ink">{w.label}</h3>
                   <span className="text-sm font-semibold text-ink-soft">
                     {round(w.points_earned, 1)} / {round(w.points_possible, 1)}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-ink-soft">
-                  <span className="font-medium text-ink">Why points were lost: </span>
-                  {w.why_points_lost}
-                </p>
-                <p className="mt-1 text-sm text-ink-soft">
-                  <span className="font-medium text-ink">How to improve: </span>
+                <p className="mt-1 text-xs text-ink-muted">{w.why_points_lost}</p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  <span className="font-semibold text-brand-400">Fix: </span>
                   {w.how_to_improve}
                 </p>
               </div>
@@ -244,38 +231,37 @@ export default async function ResultsPage({
       )}
 
       {/* STRENGTHS */}
-      {r.strengths.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-lg font-bold uppercase tracking-wide text-ink">
-            Strengths
-          </h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {r.strengths.map((s, i) => (
-              <div key={i} className="card">
-                <h3 className="font-semibold text-emerald-300">{s.title}</h3>
-                <p className="mt-1 text-sm text-ink-soft">{s.explanation}</p>
+      {strengths.length > 0 && (
+        <section className="mt-7">
+          <SectionLabel>Strengths</SectionLabel>
+          <div className="card divide-y divide-line p-0">
+            {strengths.map((s, i) => (
+              <div key={i} className="flex gap-2.5 p-3.5">
+                <span className="mt-0.5 text-grade-a" aria-hidden>
+                  ✓
+                </span>
+                <p className="text-sm text-ink-soft">
+                  <span className="font-semibold text-ink">{s.title}. </span>
+                  {s.explanation}
+                </p>
               </div>
             ))}
           </div>
         </section>
       )}
 
-      {/* GRAMMAR / CITATION */}
+      {/* GRAMMAR / CITATIONS */}
       {grammar.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-lg font-bold uppercase tracking-wide text-ink">
-            Grammar / citation issues
-          </h2>
-          <div className="mt-3 space-y-2">
+        <section className="mt-7">
+          <SectionLabel>Grammar / citations</SectionLabel>
+          <div className="card divide-y divide-line p-0">
             {grammar.map((g, i) => (
-              <div key={i} className="card flex flex-wrap gap-x-3 gap-y-1">
-                <span className="rounded bg-surface-raised px-2 py-0.5 text-xs font-medium text-ink-soft">
-                  {g.type}
-                </span>
-                <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-                  {g.location}
-                </span>
-                <p className="w-full text-sm text-ink-soft">{g.explanation}</p>
+              <div key={i} className="p-3.5">
+                <p className="text-sm text-ink">
+                  <span className="font-semibold">{g.type}</span>
+                  <span className="text-ink-muted"> — {g.location}</span>
+                </p>
+                <p className="mt-0.5 text-xs text-ink-muted">{g.explanation}</p>
               </div>
             ))}
           </div>
@@ -283,60 +269,56 @@ export default async function ResultsPage({
       )}
 
       {/* OVERALL */}
-      <section className="mt-8">
-        <h2 className="text-lg font-bold uppercase tracking-wide text-ink">
-          Overall feedback
-        </h2>
-        <div className="card mt-3">
-          <p className="whitespace-pre-line text-sm leading-relaxed text-ink-soft">
+      <section className="mt-7">
+        <SectionLabel>Overall</SectionLabel>
+        <div className="card">
+          <p className="text-sm leading-relaxed text-ink-soft">
             {r.overall_feedback}
           </p>
         </div>
       </section>
 
-      {/* RE-GRADE CTA */}
-      <section className="mt-8 rounded-2xl border border-brand-200 bg-brand-50 p-6">
-        <h2 className="text-lg font-bold text-ink">Ready to check your revision?</h2>
-        <p className="mt-1 text-sm text-ink-soft">
-          Fix the issues above, upload your revised work, and see if your estimated
-          grade improves.
+      {/* SINGLE RE-GRADE CTA */}
+      <div className="mt-8 rounded-2xl border border-brand-200 bg-brand-50 p-5 text-center">
+        <p className="text-sm text-ink-soft">
+          Fixed the issues above? Upload your revision and see if the estimate
+          improves.
         </p>
-        <Link href={`/grade?assignment=${assignment.id}`} className="btn-primary mt-4">
-          Re-Grade My Work
+        <Link
+          href={`/grade?assignment=${assignment.id}`}
+          className="btn-primary mt-3"
+        >
+          Check My Revision
         </Link>
-      </section>
-
-      {/* ACTIONS */}
-      <div className="mt-8 flex flex-wrap gap-3">
-        <Link href={`/grade?assignment=${assignment.id}`} className="btn-secondary">
-          Re-Grade My Work
-        </Link>
-        <Link href="/grade" className="btn-secondary">
-          Grade Something Else
-        </Link>
+        <div className="mt-3">
+          <Link
+            href="/grade"
+            className="text-xs text-ink-muted hover:text-ink"
+          >
+            or grade something else
+          </Link>
+        </div>
       </div>
 
-      <div className="mt-6 space-y-3">
-        <details className="card">
-          <summary className="cursor-pointer text-sm font-semibold text-ink">
-            View Your Work
+      <div className="mt-6 space-y-2.5">
+        <details className="card p-4">
+          <summary className="cursor-pointer text-sm font-medium text-ink-soft">
+            View your work
           </summary>
-          <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-soft">
+          <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
             {attempt.work_text || "(Your work was provided as images.)"}
           </p>
         </details>
-        <details className="card">
-          <summary className="cursor-pointer text-sm font-semibold text-ink">
-            View Grading Materials
+        <details className="card p-4">
+          <summary className="cursor-pointer text-sm font-medium text-ink-soft">
+            View grading materials
           </summary>
-          <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-soft">
+          <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
             {assignment.grading_materials_text ||
               "(Grading materials were provided as images.)"}
           </p>
         </details>
       </div>
-
-      <p className="mt-8 text-center text-xs text-ink-muted">{DISCLAIMER}</p>
     </Shell>
   );
 }
@@ -353,8 +335,8 @@ async function Shell({
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader plan={entitlement.plan} remaining={remaining} />
-      <main className="container-page flex-1 py-10">
-        <div className="mx-auto max-w-3xl">{children}</div>
+      <main className="container-page flex-1 py-9">
+        <div className="mx-auto max-w-2xl">{children}</div>
       </main>
     </div>
   );

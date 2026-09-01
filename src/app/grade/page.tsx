@@ -4,7 +4,7 @@ import { GradeForm } from "@/components/grade-form";
 import { Disclaimer } from "@/components/disclaimer";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 import { getEntitlement } from "@/lib/entitlements";
-import type { Assignment, GradingAttempt } from "@/lib/types";
+import type { Assignment } from "@/lib/types";
 
 export const metadata = { title: "Grade My Work" };
 export const dynamic = "force-dynamic";
@@ -23,28 +23,16 @@ export default async function GradePage({
   }
 
   const { assignment: assignmentId } = await searchParams;
-  let regrade:
-    | { assignment: Assignment; nextDraft: number; lastScore: number | null }
-    | undefined;
+  let regrade: { assignment: Assignment } | undefined;
 
   if (assignmentId) {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase
       .from("assignments")
-      .select("*, grading_attempts(draft_number, score, status)")
+      .select("*")
       .eq("id", assignmentId)
-      .single<Assignment & { grading_attempts: GradingAttempt[] }>();
-
-    if (data) {
-      const complete = data.grading_attempts.filter((a) => a.status === "complete");
-      const maxDraft = Math.max(0, ...data.grading_attempts.map((a) => a.draft_number));
-      const last = complete.sort((a, b) => b.draft_number - a.draft_number)[0];
-      regrade = {
-        assignment: data,
-        nextDraft: maxDraft + 1,
-        lastScore: last?.score ?? null,
-      };
-    }
+      .single<Assignment>();
+    if (data) regrade = { assignment: data };
   }
 
   const remaining = entitlement.devBypass ? "unlimited" : entitlement.remaining;
@@ -52,14 +40,14 @@ export default async function GradePage({
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader plan={entitlement.plan} remaining={remaining} />
-      <main className="container-page flex-1 py-10">
+      <main className="container-page flex-1 py-9">
         <div className="mx-auto max-w-2xl">
-          <h1 className="text-2xl font-bold tracking-tight text-ink">
-            {regrade ? `Re-grade: ${regrade.assignment.title}` : "Grade my work"}
+          <h1 className="text-xl font-bold tracking-tight text-ink">
+            {regrade ? `Check my revision: ${regrade.assignment.title}` : "Grade my work"}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
             {regrade
-              ? `This will be Draft ${regrade.nextDraft}. Your original grading materials are kept — update your work below.`
+              ? "Your grading materials are kept — just add your revised work below. This counts as one grading attempt."
               : "Upload how your work will be graded, plus your completed work. Your first grade is free."}
           </p>
 

@@ -20,8 +20,32 @@ const HINT = "PDF · DOCX · TXT · JPG · PNG · HEIC — multiple files & phot
 
 interface RegradeProps {
   assignment: Assignment;
-  nextDraft: number;
-  lastScore: number | null;
+}
+
+function PhotoTip() {
+  return (
+    <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-muted">
+      <svg
+        width="13"
+        height="13"
+        viewBox="0 0 24 24"
+        fill="none"
+        className="mt-0.5 shrink-0"
+        aria-hidden
+      >
+        <path
+          d="M4 8a2 2 0 0 1 2-2h1.6l1-1.5A2 2 0 0 1 11.3 4h1.4a2 2 0 0 1 1.7.9l1 1.6H17a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+        <circle cx="12" cy="12.5" r="3" stroke="currentColor" strokeWidth="1.6" />
+      </svg>
+      <span>
+        Taking a photo? Make sure the whole page is visible, in focus, and
+        well-lit for the most accurate grade.
+      </span>
+    </p>
+  );
 }
 
 const WORK_TYPES = [
@@ -86,7 +110,7 @@ export function GradeForm({
   async function runGrade() {
     setBusy(true);
     setError(null);
-    if (regrade) track("regrade_clicked", { draft: regrade.nextDraft });
+    if (regrade) track("regrade_clicked");
     else track("grading_started", { source: variant });
 
     const fd = new FormData();
@@ -148,9 +172,7 @@ export function GradeForm({
 
   if (busy) return <GradingLoader />;
 
-  const submitLabel = regrade
-    ? `Grade Draft ${regrade.nextDraft}`
-    : "Grade My Work";
+  const submitLabel = regrade ? "Check My Revision" : "Grade My Work";
 
   return (
     <>
@@ -191,6 +213,7 @@ export function GradeForm({
               hint={HINT}
               idPrefix="mat"
             />
+            <PhotoTip />
             <details className="group mt-3">
               <summary className="cursor-pointer text-sm font-medium text-brand-600 hover:text-brand-500">
                 Paste text instead
@@ -227,6 +250,7 @@ export function GradeForm({
               hint={HINT}
               idPrefix="work"
             />
+            <PhotoTip />
             <details className="group mt-3">
               <summary className="cursor-pointer text-sm font-medium text-brand-600 hover:text-brand-500">
                 Paste text instead

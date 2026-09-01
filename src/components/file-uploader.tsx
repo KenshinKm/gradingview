@@ -107,6 +107,13 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
         onChange={(e) => doReplace(e.target.files)}
       />
 
+      {files.length > 1 && (
+        <p className="text-xs text-ink-muted">
+          Upload every page in order — use the ↑ ↓ arrows to reorder before
+          grading.
+        </p>
+      )}
+
       {files.length > 0 && (
         <ul className="space-y-1.5">
           {files.map((f, i) => (

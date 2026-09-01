@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { extractJson, normalizeResult, GradingValidationError } from "./normalize";
+import {
+  extractJson,
+  normalizeResult,
+  checkUnreadable,
+  GradingValidationError,
+  UnreadableImageError,
+} from "./normalize";
 
 const rubricModelOutput = {
   score: 999, // deliberately wrong — should be recomputed from sections
@@ -39,6 +45,39 @@ const mixedFormatOutput = {
   grammar_or_citation_issues: [],
   overall_feedback: "Mixed submission graded by section.",
 };
+
+describe("checkUnreadable", () => {
+  it("does nothing for a normal grade object", () => {
+    expect(() => checkUnreadable({ score: 90, sections: [] })).not.toThrow();
+    expect(() => checkUnreadable({ unreadable_images: [] })).not.toThrow();
+  });
+
+  it("throws UnreadableImageError when the model reports unreadable images", () => {
+    let caught: unknown;
+    try {
+      checkUnreadable({
+        unreadable_images: [
+          { label: "Your work — page 3", reason: "blurry" },
+          { label: "Your work — page 5", reason: "too dark" },
+        ],
+      });
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(UnreadableImageError);
+    const err = caught as UnreadableImageError;
+    expect(err.images).toHaveLength(2);
+    expect(err.studentMessage).toMatch(/page 3/i);
+    expect(err.studentMessage).toMatch(/blurry/i);
+    expect(err.studentMessage).toMatch(/retake/i);
+  });
+
+  it("tolerates alternate key names", () => {
+    expect(() =>
+      checkUnreadable({ unreadableImages: [{ page: "Page 2", issue: "glare" }] }),
+    ).toThrow(UnreadableImageError);
+  });
+});
 
 describe("extractJson", () => {
   it("parses raw JSON", () => {

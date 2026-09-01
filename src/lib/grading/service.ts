@@ -4,7 +4,9 @@ import { SYSTEM_PROMPT, buildUserPrompt, type GradingInput } from "./prompt";
 import {
   extractJson,
   normalizeResult,
+  checkUnreadable,
   GradingValidationError,
+  UnreadableImageError,
 } from "./normalize";
 import type { GradeResult } from "./schema";
 
@@ -65,10 +67,14 @@ export async function gradeSubmission(
 
     try {
       const json = extractJson(text);
+      // The model reports unreadable images instead of a grade — do not retry,
+      // do not guess; surface it so the caller can ask for better photos.
+      checkUnreadable(json);
       const result = normalizeResult(json);
       return { result, model };
     } catch (err) {
       lastError = err;
+      if (err instanceof UnreadableImageError) throw err;
       if (!(err instanceof GradingValidationError)) throw err;
     }
   }

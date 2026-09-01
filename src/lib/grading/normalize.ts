@@ -24,6 +24,62 @@ export class GradingValidationError extends Error {
   }
 }
 
+export interface UnreadableImage {
+  label: string;
+  reason: string;
+}
+
+/**
+ * Raised when the model reports it cannot reliably read one or more attached
+ * images. The grading attempt must fail WITHOUT consuming a usage credit and
+ * the student is asked to retake the photo(s).
+ */
+export class UnreadableImageError extends Error {
+  constructor(public readonly images: UnreadableImage[]) {
+    super("One or more uploaded images could not be read reliably.");
+    this.name = "UnreadableImageError";
+  }
+
+  /** Friendly, student-facing message naming the pages to replace. */
+  get studentMessage(): string {
+    if (this.images.length === 0) {
+      return "We're having trouble reading one of your photos. Retake it in good lighting with the whole page visible.";
+    }
+    const parts = this.images.slice(0, 4).map((i) => {
+      const where = i.label.replace(/^Your work —\s*/i, "").replace(/:$/, "").trim();
+      const label = where || "one page";
+      return i.reason
+        ? `${cap(label)} — ${i.reason}`
+        : `${cap(label)} couldn't be read`;
+    });
+    return `We're having trouble reading ${parts.join("; ")}. Retake the photo(s) in good lighting with the full page visible, then grade again.`;
+  }
+}
+
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * If the model returned an `unreadable_images` report instead of a grade,
+ * throw an UnreadableImageError. Call this on the parsed JSON before
+ * `normalizeResult`.
+ */
+export function checkUnreadable(input: unknown): void {
+  if (!input || typeof input !== "object") return;
+  const rec = input as Record<string, unknown>;
+  const raw = rec.unreadable_images ?? rec.unreadableImages;
+  if (!Array.isArray(raw) || raw.length === 0) return;
+  const images: UnreadableImage[] = raw.map((r) => {
+    const o = (r ?? {}) as Record<string, unknown>;
+    return {
+      label: String(o.label ?? o.page ?? o.image ?? "").trim(),
+      reason: String(o.reason ?? o.issue ?? "").trim(),
+    };
+  });
+  throw new UnreadableImageError(images);
+}
+
 /** Extract the first JSON object from a model response (tolerates code fences / prose). */
 export function extractJson(raw: string): unknown {
   const trimmed = raw.trim();
