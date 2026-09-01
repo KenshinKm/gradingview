@@ -54,12 +54,17 @@ export const limits = {
  * Returns true when Stripe is fully configured for live billing.
  * In production this MUST be true or entitlement checks fail closed.
  */
+function realValue(v: string): boolean {
+  // Reject empty and the obvious `.env.example` placeholders.
+  return Boolean(v) && !/(^|_)xxx$/i.test(v) && !v.endsWith("YOUR-PROJECT");
+}
+
 export function stripeConfigured(): boolean {
-  return Boolean(
-    stripeEnv.secretKey &&
-      stripeEnv.webhookSecret &&
-      stripeEnv.studentPriceId &&
-      stripeEnv.studentPlusPriceId,
+  return (
+    realValue(stripeEnv.secretKey) &&
+    realValue(stripeEnv.webhookSecret) &&
+    realValue(stripeEnv.studentPriceId) &&
+    realValue(stripeEnv.studentPlusPriceId)
   );
 }
 
