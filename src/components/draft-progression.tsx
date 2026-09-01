@@ -30,7 +30,7 @@ export function DraftProgression({
               className={`rounded-xl border px-4 py-3 text-center transition ${
                 d.id === currentId
                   ? "border-brand-400 bg-brand-50"
-                  : "border-slate-200 hover:border-slate-300"
+                  : "border-line hover:border-line-strong"
               }`}
             >
               <div className="text-xs font-medium text-ink-muted">

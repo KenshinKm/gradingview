@@ -56,7 +56,7 @@ export function PricingButtons({
             ? "Redirecting…"
             : "Subscribe"}
       </button>
-      {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
+      {error && <p className="mt-2 text-xs text-rose-400">{error}</p>}
     </div>
   );
 }

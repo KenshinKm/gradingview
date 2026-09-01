@@ -13,13 +13,15 @@ export interface UploaderProps {
 }
 
 /**
- * Multi-file uploader with thumbnails, per-file remove/replace, and
- * user-controlled ordering (the order in `files` is the submission order).
+ * Multi-file uploader: drag-and-drop, click-to-browse, thumbnails,
+ * per-file remove / replace, and user-controlled ordering (the order in
+ * `files` is the submission order).
  */
 export function FileUploader({ files, onChange, accept, hint, idPrefix }: UploaderProps) {
   const addRef = useRef<HTMLInputElement>(null);
   const replaceRef = useRef<HTMLInputElement>(null);
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [urls, setUrls] = useState<(string | null)[]>([]);
 
   useEffect(() => {
@@ -35,11 +37,9 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
     onChange([...files, ...Array.from(list)]);
     if (addRef.current) addRef.current.value = "";
   }
-
   function remove(i: number) {
     onChange(files.filter((_, idx) => idx !== i));
   }
-
   function move(i: number, dir: -1 | 1) {
     const j = i + dir;
     if (j < 0 || j >= files.length) return;
@@ -47,7 +47,6 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
     [next[i], next[j]] = [next[j], next[i]];
     onChange(next);
   }
-
   function doReplace(list: FileList | null) {
     if (replaceIndex === null || !list?.length) return;
     const next = [...files];
@@ -58,18 +57,36 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div
         onClick={() => addRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
           e.preventDefault();
+          setDragging(false);
           add(e.dataTransfer.files);
         }}
-        className="cursor-pointer rounded-xl border-2 border-dashed border-slate-200 bg-surface-subtle px-4 py-8 text-center transition hover:border-brand-300"
+        className={`dropzone ${dragging ? "border-brand-400 bg-[#111a2b]" : ""}`}
       >
+        <div className="mx-auto mb-2 grid h-9 w-9 place-items-center rounded-lg border border-line-strong bg-surface-raised text-ink-soft">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
         <p className="text-sm font-medium text-ink-soft">
-          Click to upload or drag files here
+          {files.length > 0
+            ? "Add more files"
+            : "Drop files here or click to browse"}
         </p>
         <p className="mt-1 text-xs text-ink-muted">{hint}</p>
         <input
@@ -91,29 +108,33 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
       />
 
       {files.length > 0 && (
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {files.map((f, i) => (
             <li
               key={`${idPrefix}-${f.name}-${i}`}
-              className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2"
+              className="flex items-center gap-3 rounded-lg border border-line bg-surface-raised px-2.5 py-2"
             >
-              <span className="w-6 shrink-0 text-center text-xs font-semibold text-ink-muted">
+              <span className="w-5 shrink-0 text-center text-xs font-semibold text-ink-muted">
                 {i + 1}
               </span>
               {urls[i] ? (
-                <img src={urls[i]!} alt="" className="h-10 w-10 rounded object-cover" />
+                <img
+                  src={urls[i]!}
+                  alt=""
+                  className="h-10 w-10 rounded-md border border-line object-cover"
+                />
               ) : (
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-slate-100 text-[10px] font-semibold text-ink-muted">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-line bg-surface text-[10px] font-semibold text-ink-muted">
                   {f.name.split(".").pop()?.toUpperCase().slice(0, 4)}
                 </span>
               )}
               <span className="flex-1 truncate text-sm text-ink-soft">{f.name}</span>
-              <div className="flex shrink-0 items-center gap-1 text-ink-muted">
+              <div className="flex shrink-0 items-center gap-0.5 text-ink-muted">
                 <button
                   type="button"
                   aria-label="Move up"
                   disabled={i === 0}
-                  className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30"
+                  className="rounded px-1.5 py-1 text-xs transition hover:bg-surface hover:text-ink disabled:opacity-25"
                   onClick={() => move(i, -1)}
                 >
                   ↑
@@ -122,14 +143,14 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
                   type="button"
                   aria-label="Move down"
                   disabled={i === files.length - 1}
-                  className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30"
+                  className="rounded px-1.5 py-1 text-xs transition hover:bg-surface hover:text-ink disabled:opacity-25"
                   onClick={() => move(i, 1)}
                 >
                   ↓
                 </button>
                 <button
                   type="button"
-                  className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100"
+                  className="rounded px-2 py-1 text-xs transition hover:bg-surface hover:text-ink"
                   onClick={() => {
                     setReplaceIndex(i);
                     replaceRef.current?.click();
@@ -139,7 +160,7 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
                 </button>
                 <button
                   type="button"
-                  className="rounded px-1.5 py-0.5 text-xs hover:bg-rose-50 hover:text-rose-600"
+                  className="rounded px-2 py-1 text-xs transition hover:bg-rose-500/15 hover:text-rose-300"
                   onClick={() => remove(i)}
                 >
                   Remove

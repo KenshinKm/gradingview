@@ -33,7 +33,7 @@ export default async function PricingPage({
         </div>
 
         {DEV_BILLING_BYPASS && (
-          <p className="mx-auto mt-6 max-w-xl rounded-lg bg-amber-50 px-4 py-2 text-center text-sm text-amber-700">
+          <p className="mx-auto mt-6 max-w-xl rounded-lg bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-300">
             Development mode: billing is bypassed locally. Checkout buttons need
             real Stripe keys.
           </p>

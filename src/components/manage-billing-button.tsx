@@ -25,7 +25,7 @@ export function ManageBillingButton({ className = "btn-secondary" }: { className
       <button className={className} onClick={open} disabled={busy}>
         {busy ? "Opening…" : "Manage billing"}
       </button>
-      {error && <span className="ml-2 text-xs text-rose-600">{error}</span>}
+      {error && <span className="ml-2 text-xs text-rose-400">{error}</span>}
     </span>
   );
 }

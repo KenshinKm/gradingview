@@ -9,7 +9,7 @@ export function AppHeader({
   remaining: number | "unlimited";
 }) {
   return (
-    <header className="border-b border-slate-100">
+    <header className="border-b border-line">
       <div className="container-page flex h-16 items-center justify-between">
         <Logo />
         <div className="flex items-center gap-2 sm:gap-4">

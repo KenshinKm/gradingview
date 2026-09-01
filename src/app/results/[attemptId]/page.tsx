@@ -113,7 +113,7 @@ export default async function ResultsPage({
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           <ScoringBasisBadge basis={r.scoring_basis} />
           {pointsPossible > 0 && (
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-ink-soft">
+            <span className="rounded-full bg-surface-raised px-3 py-1 text-xs font-medium text-ink-soft">
               {round(pointsEarned, 1)} / {round(pointsPossible, 1)} points
             </span>
           )}
@@ -126,7 +126,7 @@ export default async function ResultsPage({
         )}
 
         {r.inferred_rubric && (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          <p className="mt-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
             Some or all of this scoring was AI-inferred because no complete rubric
             or answer key was provided. Treat these numbers as a loose guide.
           </p>
@@ -200,7 +200,7 @@ export default async function ResultsPage({
                       </span>
                     </div>
                   </div>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-raised">
                     <div
                       className="h-full rounded-full bg-brand-500"
                       style={{ width: `${Math.max(2, Math.min(100, pct))}%` }}
@@ -252,7 +252,7 @@ export default async function ResultsPage({
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {r.strengths.map((s, i) => (
               <div key={i} className="card">
-                <h3 className="font-semibold text-emerald-700">{s.title}</h3>
+                <h3 className="font-semibold text-emerald-300">{s.title}</h3>
                 <p className="mt-1 text-sm text-ink-soft">{s.explanation}</p>
               </div>
             ))}
@@ -269,7 +269,7 @@ export default async function ResultsPage({
           <div className="mt-3 space-y-2">
             {grammar.map((g, i) => (
               <div key={i} className="card flex flex-wrap gap-x-3 gap-y-1">
-                <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-ink-soft">
+                <span className="rounded bg-surface-raised px-2 py-0.5 text-xs font-medium text-ink-soft">
                   {g.type}
                 </span>
                 <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">

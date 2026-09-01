@@ -6,7 +6,7 @@ export async function SiteHeader() {
   const user = await getSessionUser();
 
   return (
-    <header className="border-b border-slate-100">
+    <header className="border-b border-line">
       <div className="container-page flex h-16 items-center justify-between">
         <Logo />
         <nav className="flex items-center gap-1 sm:gap-2">
@@ -18,14 +18,9 @@ export async function SiteHeader() {
               Dashboard
             </Link>
           ) : (
-            <>
-              <Link href="/login" className="btn-ghost">
-                Log in
-              </Link>
-              <Link href="/login?mode=signup" className="btn-primary">
-                Grade My Work Free
-              </Link>
-            </>
+            <Link href="/login" className="btn-secondary">
+              Log in
+            </Link>
           )}
         </nav>
       </div>

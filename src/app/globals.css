@@ -5,6 +5,7 @@
 :root {
   --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
+  color-scheme: dark;
 }
 
 html {
@@ -13,40 +14,78 @@ html {
 }
 
 body {
-  background: #ffffff;
-  color: #0f172a;
+  /* deep graphite with a faint navy lift toward the top */
+  background-color: #0a0e16;
+  background-image: radial-gradient(
+    1200px 600px at 50% -280px,
+    rgba(107, 147, 224, 0.1),
+    transparent 70%
+  );
+  background-attachment: fixed;
+  color: #e9edf6;
+}
+
+::selection {
+  background: rgba(123, 162, 234, 0.28);
+}
+
+/* form controls inherit the dark theme */
+input,
+textarea,
+select {
+  color-scheme: dark;
 }
 
 @layer components {
   .container-page {
     @apply mx-auto w-full max-w-5xl px-5 sm:px-8;
   }
+
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition
-      focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold
+      transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
+      focus-visible:ring-offset-2 focus-visible:ring-offset-canvas
       disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+    @apply btn bg-brand-600 text-[#0a0e16] hover:bg-brand-500;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.18) inset,
+      0 8px 24px -10px rgba(107, 147, 224, 0.55);
   }
   .btn-secondary {
-    @apply btn border border-slate-200 bg-white text-ink hover:bg-slate-50;
+    @apply btn border border-line-strong bg-surface-raised text-ink hover:border-brand-400/60 hover:bg-[#212b40];
   }
   .btn-ghost {
-    @apply btn text-ink-soft hover:bg-slate-100;
+    @apply btn text-ink-soft hover:bg-surface-raised hover:text-ink;
   }
+
   .card {
-    @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-card;
+    @apply rounded-2xl border border-line bg-surface p-6 shadow-card;
   }
+  .panel {
+    @apply rounded-2xl border border-line bg-surface-subtle p-5;
+  }
+
   .label {
     @apply mb-1.5 block text-sm font-medium text-ink-soft;
   }
   .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm
-      outline-none transition placeholder:text-slate-400 focus:border-brand-500
-      focus:ring-2 focus:ring-brand-100;
+    @apply w-full rounded-xl border border-line-strong bg-surface-raised px-3.5 py-2.5 text-sm
+      text-ink outline-none transition placeholder:text-ink-muted
+      focus:border-brand-400 focus:ring-2 focus:ring-brand-400/25;
   }
   .textarea {
     @apply input min-h-[150px] resize-y leading-relaxed;
+  }
+
+  /* dashed dropzone shared by the uploaders */
+  .dropzone {
+    @apply cursor-pointer rounded-xl border border-dashed border-line-strong bg-surface-subtle
+      px-4 py-8 text-center transition hover:border-brand-400/70 hover:bg-[#111a2b];
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted;
   }
 }
