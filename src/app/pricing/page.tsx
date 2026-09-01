@@ -32,12 +32,15 @@ export default async function PricingPage({
           </p>
         </div>
 
-        {DEV_BILLING_BYPASS && (
+        {DEV_BILLING_BYPASS ? (
           <p className="mx-auto mt-6 max-w-xl rounded-lg bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-300">
-            Development mode: billing is bypassed locally. Checkout buttons need
-            real Stripe keys.
+            Development mode: billing is bypassed locally.
           </p>
-        )}
+        ) : !stripeConfigured() ? (
+          <p className="mx-auto mt-6 max-w-xl rounded-lg border border-line bg-surface-subtle px-4 py-2 text-center text-sm text-ink-soft">
+            Paid plans are launching soon. Your free grade is available now.
+          </p>
+        ) : null}
 
         <div className="mt-10 grid gap-6 lg:grid-cols-3">
           {(["free", "student", "student_plus"] as const).map((id) => {

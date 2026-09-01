@@ -49,10 +49,16 @@ export function isActiveStatus(status: string | null | undefined): boolean {
  *
  * Usage numbers (`plan`/`limit`/`used`/`remaining`/`period*`) are always the
  * honest current state so the dashboard meter is accurate. `canGrade` layers
- * the dev bypass and the production fail-closed rule on top of that.
+ * the dev bypass and the "Stripe not configured yet" rule on top of that.
+ *
+ * When Stripe isn't configured (`billingReady === false`), the FREE tier still
+ * works — every user gets their 1 lifetime grade — but paid plans are
+ * unreachable (there's no checkout / no webhook to activate them). This is
+ * "fail closed" for *paid* access without bricking the whole product at launch.
  */
 export function computeEntitlement(i: EntitlementInputs): EntitlementDecision {
-  const paidActive = i.subActive && i.subPlan !== "free";
+  // Paid plans require Stripe. Without it, an "active" sub can't be trusted.
+  const paidActive = i.billingReady && i.subActive && i.subPlan !== "free";
 
   // ---- honest current usage window ----
   let plan: PlanId;
@@ -86,10 +92,6 @@ export function computeEntitlement(i: EntitlementInputs): EntitlementDecision {
     // Local development only — limits are displayed but not enforced.
     canGrade = true;
     blockReason = null;
-  } else if (!i.billingReady) {
-    // Production fail-closed: no grading until Stripe config is present.
-    canGrade = false;
-    blockReason = "billing_not_configured";
   } else if (remaining > 0) {
     canGrade = true;
     blockReason = null;
@@ -98,9 +100,12 @@ export function computeEntitlement(i: EntitlementInputs): EntitlementDecision {
     blockReason =
       plan !== "free"
         ? "period_limit_reached"
-        : i.subPlan !== "free"
-          ? "subscription_inactive"
-          : "free_grade_used";
+        : !i.billingReady
+          ? // Free grade spent and no paid plans available yet.
+            "billing_not_configured"
+          : i.subPlan !== "free"
+            ? "subscription_inactive"
+            : "free_grade_used";
   }
 
   return {

@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getEntitlement, recordUsage } from "@/lib/entitlements";
-import { assertBillingReady } from "@/lib/billing-guard";
 import { rateLimit } from "@/lib/rate-limit";
 import { processUpload } from "@/lib/uploads";
 import { gradeSubmission } from "@/lib/grading/service";
@@ -29,15 +28,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  try {
-    assertBillingReady();
-  } catch (err) {
-    return NextResponse.json(
-      { error: (err as Error).message, code: "billing_not_configured" },
-      { status: 503 },
-    );
-  }
-
   // ---------- entitlement (server-authoritative) ----------
   const entitlement = await getEntitlement(user.id);
   if (!entitlement.canGrade) {
@@ -51,7 +41,9 @@ export async function POST(req: NextRequest) {
               ? `You've used all ${entitlement.limit} grades for this billing period.`
               : entitlement.blockReason === "subscription_inactive"
                 ? "Your subscription isn't active. Reactivate to keep grading."
-                : "Grading isn't available right now.",
+                : entitlement.blockReason === "billing_not_configured"
+                  ? "You've used your free grade. Paid plans are coming soon."
+                  : "Grading isn't available right now.",
         code: entitlement.blockReason ?? "not_entitled",
       },
       { status: 402 },

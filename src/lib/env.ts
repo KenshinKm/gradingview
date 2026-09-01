@@ -66,11 +66,11 @@ export function stripeConfigured(): boolean {
   );
 }
 
-export function assertProdBillingConfigured() {
-  if (IS_PROD && !stripeConfigured()) {
-    throw new Error(
-      "Billing is not configured. Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, " +
-        "STRIPE_STUDENT_PRICE_ID and STRIPE_STUDENT_PLUS_PRICE_ID.",
-    );
-  }
+/**
+ * Whether paid plans are available. When false, the free tier still works and
+ * paid checkout is disabled — so the app is launchable before Stripe is set up.
+ * Identical behavior in dev and prod (dev billing bypass is handled separately).
+ */
+export function billingReady(): boolean {
+  return stripeConfigured();
 }

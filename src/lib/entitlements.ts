@@ -1,6 +1,6 @@
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { DEV_BILLING_BYPASS, IS_PROD, stripeConfigured } from "@/lib/env";
+import { DEV_BILLING_BYPASS, billingReady } from "@/lib/env";
 import {
   computeEntitlement,
   isActiveStatus,
@@ -53,7 +53,7 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
 
   return computeEntitlement({
     devBypass: DEV_BILLING_BYPASS,
-    billingReady: IS_PROD ? stripeConfigured() : true,
+    billingReady: billingReady(),
     subPlan,
     subActive,
     periodStart: sub?.current_period_start ?? null,

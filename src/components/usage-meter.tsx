@@ -16,6 +16,7 @@ function formatResetDate(iso: string | null): string | null {
 export function UsageMeter({ entitlement }: { entitlement: Entitlement }) {
   const { limit, used, remaining, plan, limitScope, periodEnd, devBypass } =
     entitlement;
+  const paidComingSoon = entitlement.blockReason === "billing_not_configured";
 
   // In dev the bypass allows exceeding the limit — never render "3 of 1".
   const shownUsed = Math.min(used, limit);
@@ -56,9 +57,11 @@ export function UsageMeter({ entitlement }: { entitlement: Entitlement }) {
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <p className="text-sm text-ink-soft">
           {atLimit
-            ? isLifetime
-              ? "You've used your free lifetime grade."
-              : `You've used all ${limit} grades for this billing period.`
+            ? paidComingSoon
+              ? "You've used your free grade. Paid plans are coming soon."
+              : isLifetime
+                ? "You've used your free lifetime grade."
+                : `You've used all ${limit} grades for this billing period.`
             : `${remaining} grade${remaining === 1 ? "" : "s"} remaining`}
         </p>
 
@@ -77,7 +80,7 @@ export function UsageMeter({ entitlement }: { entitlement: Entitlement }) {
         </p>
       )}
 
-      {atLimit && !devBypass && (
+      {atLimit && !devBypass && !paidComingSoon && (
         <div className="mt-4">
           <Link href="/pricing" className="btn-primary w-full sm:w-auto">
             {plan === "free" ? "See plans" : "Upgrade plan"}

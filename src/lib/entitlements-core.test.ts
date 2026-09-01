@@ -113,11 +113,32 @@ describe("inactive / canceled subscription", () => {
   });
 });
 
-describe("production fail-closed", () => {
-  it("blocks everything when billing config is missing", () => {
+describe("Stripe not configured yet (launch without billing)", () => {
+  it("the free lifetime grade still works", () => {
     const d = computeEntitlement({ ...base, billingReady: false, freeUsed: 0 });
+    expect(d.plan).toBe("free");
+    expect(d.canGrade).toBe(true);
+    expect(d.remaining).toBe(1);
+  });
+
+  it("blocks once the free grade is spent — paid plans unreachable", () => {
+    const d = computeEntitlement({ ...base, billingReady: false, freeUsed: 1 });
     expect(d.canGrade).toBe(false);
     expect(d.blockReason).toBe("billing_not_configured");
+  });
+
+  it("ignores an 'active' paid sub that can't be verified without Stripe", () => {
+    const d = computeEntitlement({
+      ...base,
+      billingReady: false,
+      subPlan: "student",
+      subActive: true,
+      periodStart: "2026-09-01T00:00:00Z",
+      periodEnd: "2026-10-01T00:00:00Z",
+      freeUsed: 0,
+    });
+    expect(d.plan).toBe("free");
+    expect(d.limitScope).toBe("lifetime");
   });
 });
 

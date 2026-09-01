@@ -11,7 +11,7 @@ const COPY: Record<string, string> = {
   subscription_inactive:
     "Your subscription isn't active right now. Reactivate to keep grading.",
   billing_not_configured:
-    "Grading is temporarily unavailable while billing is being set up.",
+    "You've used your free grade. Paid plans are coming soon — check back shortly.",
   not_entitled: "You need an active plan to grade your work.",
 };
 

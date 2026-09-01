@@ -68,28 +68,26 @@ export default async function DashboardPage() {
             <p className="mt-1 text-sm text-ink-muted">{plan.name} plan</p>
           </div>
           <div className="flex gap-2">
-            {entitlement.plan === "free" && !entitlement.devBypass && (
-              <Link href="/pricing" className="btn-secondary">
-                Upgrade
-              </Link>
-            )}
+            {entitlement.plan === "free" &&
+              !entitlement.devBypass &&
+              stripeConfigured() && (
+                <Link href="/pricing" className="btn-secondary">
+                  Upgrade
+                </Link>
+              )}
             <Link href="/grade" className="btn-primary">
               Grade New Work
             </Link>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div className="mt-6">
           <UsageMeter entitlement={entitlement} />
-          <div className="flex gap-2 sm:flex-col">
-            {entitlement.plan === "free" ? (
-              <Link href="/pricing" className="btn-secondary w-full">
-                See plans
-              </Link>
-            ) : stripeConfigured() ? (
-              <ManageBillingButton className="btn-secondary w-full" />
-            ) : null}
-          </div>
+          {entitlement.plan !== "free" && stripeConfigured() && (
+            <div className="mt-3">
+              <ManageBillingButton />
+            </div>
+          )}
         </div>
 
         <h2 className="mt-8 text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">

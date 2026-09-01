@@ -83,13 +83,19 @@ that section is clearly labeled **AI-inferred** — it never pretends a key exis
 - The frontend never sends usage counts; `getEntitlement()` always recomputes
   from `subscriptions` + `usage_events`.
 
-### Development billing mode
+### Billing modes
 
-Set `BILLING_MODE=dev` (only honored when `NODE_ENV !== "production"`). This
-grants an unlimited local allowance so you can exercise signup, uploads,
-extraction, grading, results, re-grading and history **without any Stripe
-keys**. In production this flag is ignored and entitlement checks **fail closed**
-if Stripe env is missing.
+- **`BILLING_MODE=dev`** (only honored when `NODE_ENV !== "production"`) —
+  unlimited local grades, no limits enforced. Use while iterating.
+- **`BILLING_MODE=live`** (the default; forced in production) — real limits:
+  - **Stripe not configured** → the **free tier still works** (1 lifetime grade
+    per user). Paid plans show "coming soon" and checkout is disabled. This is
+    the launch-without-Stripe state.
+  - **Stripe configured** (`STRIPE_*` env set) → paid plans activate
+    automatically; Checkout, webhooks and the Customer Portal come online.
+
+Entitlement is always decided server-side by `getEntitlement()`; the dashboard
+meter is display-only.
 
 ---
 
