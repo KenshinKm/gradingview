@@ -61,15 +61,30 @@ export function AuthPanel({
           password,
           options: { emailRedirectTo: emailRedirect },
         });
-        if (error) throw error;
-        track("account_created", { method: "password" });
+
         // signUp returns a session immediately when email confirmation is off.
-        if (data.session) {
+        if (!error && data.session) {
+          track("account_created", { method: "password" });
           onAuthed();
           return;
         }
-        setSent(true);
-        return;
+
+        // No session yet — the account may still have been created (e.g. the
+        // built-in confirmation email was rate-limited, but the row exists and
+        // is auto-confirmed). Try to sign in with the same credentials.
+        const signIn = await supabase.auth.signInWithPassword({ email, password });
+        if (!signIn.error && signIn.data.session) {
+          track("account_created", { method: "password" });
+          onAuthed();
+          return;
+        }
+
+        // Genuinely needs email confirmation.
+        if (!error) {
+          setSent(true);
+          return;
+        }
+        throw error;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
