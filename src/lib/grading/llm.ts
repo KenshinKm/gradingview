@@ -69,7 +69,7 @@ async function callAnthropic(req: LlmRequest, model: string): Promise<LlmRespons
 
   const res = await client.messages.create({
     model,
-    max_tokens: 4096,
+    max_tokens: 8000,
     system: req.system,
     messages: [{ role: "user", content }],
   });
@@ -103,7 +103,7 @@ async function callOpenAi(req: LlmRequest, model: string): Promise<LlmResponse> 
 
   const res = await client.chat.completions.create({
     model,
-    max_tokens: 4096,
+    max_tokens: 8000,
     messages: [
       { role: "system", content: req.system },
       { role: "user", content: userContent },

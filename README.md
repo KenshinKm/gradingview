@@ -148,8 +148,8 @@ migration.
 
 ```env
 LLM_PROVIDER=anthropic            # or "openai"
-LLM_MODEL=claude-sonnet-4-20250514
-LLM_VISION_MODEL=claude-sonnet-4-20250514
+LLM_MODEL=claude-sonnet-5
+LLM_VISION_MODEL=claude-sonnet-5
 ANTHROPIC_API_KEY=sk-ant-...
 # For OpenAI-compatible providers instead:
 # LLM_PROVIDER=openai

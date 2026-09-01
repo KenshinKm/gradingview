@@ -27,11 +27,9 @@ export const supabaseEnv = {
 
 export const llmEnv = {
   provider: (process.env.LLM_PROVIDER || "anthropic") as "anthropic" | "openai",
-  model: process.env.LLM_MODEL || "claude-sonnet-4-20250514",
+  model: process.env.LLM_MODEL || "claude-sonnet-5",
   visionModel:
-    process.env.LLM_VISION_MODEL ||
-    process.env.LLM_MODEL ||
-    "claude-sonnet-4-20250514",
+    process.env.LLM_VISION_MODEL || process.env.LLM_MODEL || "claude-sonnet-5",
   anthropicKey: process.env.ANTHROPIC_API_KEY || "",
   openaiKey: process.env.OPENAI_API_KEY || "",
   openaiBaseUrl: process.env.OPENAI_BASE_URL || undefined,
