@@ -5,14 +5,14 @@ import { track } from "@/lib/analytics";
 
 const COPY: Record<string, string> = {
   free_grade_used:
-    "You've used your free lifetime grade. Subscribe to keep grading and re-grading your drafts.",
+    "You've used your free lifetime grade. Subscribe to keep grading and checking revisions.",
   period_limit_reached:
-    "You've used all your grading attempts for this billing period. Upgrade or wait for your next period.",
+    "You've used all your grading attempts for this billing period. Upgrade for more, or wait for your period to reset.",
   subscription_inactive:
     "Your subscription isn't active right now. Reactivate to keep grading.",
   billing_not_configured:
     "Grading is temporarily unavailable while billing is being set up.",
-  not_entitled: "You need an active plan to grade this essay.",
+  not_entitled: "You need an active plan to grade your work.",
 };
 
 export function PaywallBanner({ reason }: { reason: string }) {

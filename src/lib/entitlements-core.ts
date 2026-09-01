@@ -9,11 +9,16 @@ export type BlockReason =
 export interface EntitlementDecision {
   plan: PlanId;
   limitScope: "lifetime" | "billing_period";
+  /** Attempts allowed in the current window (from PLANS — the only source). */
   limit: number;
+  /** Successful attempts consumed in the current window. */
   used: number;
+  /** limit - used, floored at 0. */
   remaining: number;
+  /** Server-authoritative: is another grade allowed right now? */
   canGrade: boolean;
   blockReason: BlockReason | null;
+  /** True only in local development billing bypass — limits are NOT enforced. */
   devBypass: boolean;
   periodStart: string | null;
   periodEnd: string | null;
@@ -41,80 +46,73 @@ export function isActiveStatus(status: string | null | undefined): boolean {
 
 /**
  * Pure entitlement decision. No I/O — unit tested directly.
+ *
+ * Usage numbers (`plan`/`limit`/`used`/`remaining`/`period*`) are always the
+ * honest current state so the dashboard meter is accurate. `canGrade` layers
+ * the dev bypass and the production fail-closed rule on top of that.
  */
 export function computeEntitlement(i: EntitlementInputs): EntitlementDecision {
   const paidActive = i.subActive && i.subPlan !== "free";
 
-  // ---- DEV BYPASS (only ever passed as true when NODE_ENV !== production) ----
-  if (i.devBypass) {
-    return {
-      plan: paidActive ? i.subPlan : "free",
-      limitScope: "billing_period",
-      limit: 9999,
-      used: 0,
-      remaining: 9999,
-      canGrade: true,
-      blockReason: null,
-      devBypass: true,
-      periodStart: i.periodStart,
-      periodEnd: i.periodEnd,
-    };
+  // ---- honest current usage window ----
+  let plan: PlanId;
+  let limitScope: "lifetime" | "billing_period";
+  let used: number;
+  let periodStart: string | null;
+  let periodEnd: string | null;
+
+  if (paidActive) {
+    plan = i.subPlan;
+    limitScope = "billing_period";
+    used = Math.max(0, i.paidUsedThisPeriod);
+    periodStart = i.periodStart;
+    periodEnd = i.periodEnd;
+  } else {
+    plan = "free";
+    limitScope = "lifetime";
+    used = Math.max(0, i.freeUsed);
+    periodStart = null;
+    periodEnd = null;
   }
 
-  // ---- fail closed if billing config missing (production) ----
-  if (!i.billingReady) {
-    return {
-      plan: "free",
-      limitScope: "lifetime",
-      limit: PLANS.free.gradeLimit,
-      used: 0,
-      remaining: 0,
-      canGrade: false,
-      blockReason: "billing_not_configured",
-      devBypass: false,
-      periodStart: null,
-      periodEnd: null,
-    };
-  }
-
-  // ---- active paid plan: per billing period ----
-  if (paidActive && i.periodStart && i.periodEnd) {
-    const limit = PLANS[i.subPlan].gradeLimit;
-    const used = Math.max(0, i.paidUsedThisPeriod);
-    const remaining = Math.max(0, limit - used);
-    return {
-      plan: i.subPlan,
-      limitScope: "billing_period",
-      limit,
-      used,
-      remaining,
-      canGrade: remaining > 0,
-      blockReason: remaining > 0 ? null : "period_limit_reached",
-      devBypass: false,
-      periodStart: i.periodStart,
-      periodEnd: i.periodEnd,
-    };
-  }
-
-  // ---- free plan: one lifetime grade ----
-  const limit = PLANS.free.gradeLimit;
-  const used = Math.max(0, i.freeUsed);
+  const limit = PLANS[plan].gradeLimit;
   const remaining = Math.max(0, limit - used);
+
+  // ---- can another grade be run? (server-authoritative) ----
+  let canGrade: boolean;
+  let blockReason: BlockReason | null;
+
+  if (i.devBypass) {
+    // Local development only — limits are displayed but not enforced.
+    canGrade = true;
+    blockReason = null;
+  } else if (!i.billingReady) {
+    // Production fail-closed: no grading until Stripe config is present.
+    canGrade = false;
+    blockReason = "billing_not_configured";
+  } else if (remaining > 0) {
+    canGrade = true;
+    blockReason = null;
+  } else {
+    canGrade = false;
+    blockReason =
+      plan !== "free"
+        ? "period_limit_reached"
+        : i.subPlan !== "free"
+          ? "subscription_inactive"
+          : "free_grade_used";
+  }
+
   return {
-    plan: "free",
-    limitScope: "lifetime",
+    plan,
+    limitScope,
     limit,
     used,
     remaining,
-    canGrade: remaining > 0,
-    blockReason:
-      remaining > 0
-        ? null
-        : i.subPlan !== "free"
-          ? "subscription_inactive"
-          : "free_grade_used",
-    devBypass: false,
-    periodStart: null,
-    periodEnd: null,
+    canGrade,
+    blockReason,
+    devBypass: i.devBypass,
+    periodStart,
+    periodEnd,
   };
 }

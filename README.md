@@ -36,7 +36,7 @@ src/
     page.tsx                     Landing page
     login/                       Supabase Auth (password + magic link)
     auth/callback|signout        Auth route handlers
-    dashboard/                   Plan, usage, assignment history, draft progression
+    dashboard/                   Plan, usage meter, grading history
     grade/                       Core grading form (two sections + re-grade)
     results/[attemptId]/         The grade hero + full structured feedback
     pricing/                     Free / Student / Student Plus + paywall
@@ -74,7 +74,7 @@ that section is clearly labeled **AI-inferred** — it never pretends a key exis
 
 - Every authenticated user gets **1 free lifetime full grade** (complete result,
   nothing blurred or withheld).
-- **Student** = 10 grading attempts / Stripe billing period. **Student Plus** = 20.
+- **Student** = 15 grading attempts / Stripe billing period. **Student Plus** = 30.
 - Every successful initial grade _or_ re-grade = one attempt.
 - **Failed** processing / server errors never consume a credit (`usage_events` is
   written only after a valid, persisted result).
@@ -184,7 +184,7 @@ In the Stripe Dashboard (test mode):
 
 1. **Product: "GradingView Student"** → recurring price **$19.99 / month** →
    copy the price id → `STRIPE_STUDENT_PRICE_ID`.
-2. **Product: "GradingView Student Plus"** → recurring price **$29.99 / month**
+2. **Product: "GradingView Student Plus"** → recurring price **$49.99 / month**
    → copy the price id → `STRIPE_STUDENT_PLUS_PRICE_ID`.
 3. **Developers → API keys**: `STRIPE_SECRET_KEY`,
    `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.

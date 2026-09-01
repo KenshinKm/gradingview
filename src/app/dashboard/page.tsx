@@ -6,6 +6,7 @@ import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/serve
 import { getEntitlement } from "@/lib/entitlements";
 import { PLANS } from "@/lib/plans";
 import { ManageBillingButton } from "@/components/manage-billing-button";
+import { UsageMeter } from "@/components/usage-meter";
 import { stripeConfigured } from "@/lib/env";
 import { round } from "@/lib/grading/grade-math";
 import type { AssignmentWithAttempts } from "@/lib/types";
@@ -64,14 +65,7 @@ export default async function DashboardPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-ink">Dashboard</h1>
-            <p className="mt-1 text-sm text-ink-muted">
-              {plan.name} plan ·{" "}
-              {entitlement.devBypass
-                ? "development mode — unlimited grades"
-                : entitlement.limitScope === "lifetime"
-                  ? `${entitlement.remaining} of ${entitlement.limit} free lifetime grade${entitlement.limit === 1 ? "" : "s"} left`
-                  : `${entitlement.remaining} of ${entitlement.limit} grades left this period`}
-            </p>
+            <p className="mt-1 text-sm text-ink-muted">{plan.name} plan</p>
           </div>
           <div className="flex gap-2">
             {entitlement.plan === "free" && !entitlement.devBypass && (
@@ -85,26 +79,15 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="card mt-6 flex flex-wrap items-center justify-between gap-3 p-4">
-          <div className="text-sm">
-            <p className="font-medium text-ink">Current plan: {plan.name}</p>
-            <p className="text-ink-muted">
-              {entitlement.limitScope === "billing_period" && entitlement.periodEnd
-                ? `${remaining} grades left · resets ${new Date(
-                    entitlement.periodEnd,
-                  ).toLocaleDateString()}`
-                : entitlement.devBypass
-                  ? "Development mode — unlimited grades, no billing"
-                  : `${remaining} free lifetime grade${remaining === 1 ? "" : "s"} remaining`}
-            </p>
-          </div>
-          <div className="flex gap-2">
+        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+          <UsageMeter entitlement={entitlement} />
+          <div className="flex gap-2 sm:flex-col">
             {entitlement.plan === "free" ? (
-              <Link href="/pricing" className="btn-secondary">
+              <Link href="/pricing" className="btn-secondary w-full">
                 See plans
               </Link>
             ) : stripeConfigured() ? (
-              <ManageBillingButton />
+              <ManageBillingButton className="btn-secondary w-full" />
             ) : null}
           </div>
         </div>

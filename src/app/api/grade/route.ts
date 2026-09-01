@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
           entitlement.blockReason === "free_grade_used"
             ? "You've used your free lifetime grade. Upgrade to keep grading."
             : entitlement.blockReason === "period_limit_reached"
-              ? "You've used all your grading attempts for this billing period."
+              ? `You've used all ${entitlement.limit} grades for this billing period.`
               : entitlement.blockReason === "subscription_inactive"
                 ? "Your subscription isn't active. Reactivate to keep grading."
                 : "Grading isn't available right now.",

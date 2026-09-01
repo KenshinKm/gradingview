@@ -11,6 +11,11 @@ export interface Plan {
   features: string[];
 }
 
+/**
+ * Single source of truth for plan limits. Change a `gradeLimit` here and it
+ * propagates to the pricing UI, dashboard usage meter, entitlement logic,
+ * paywalls, and tests — nothing else hardcodes these numbers.
+ */
 export const PLANS: Record<PlanId, Plan> = {
   free: {
     id: "free",
@@ -21,8 +26,9 @@ export const PLANS: Record<PlanId, Plan> = {
     limitScope: "lifetime",
     features: [
       "1 lifetime full grade",
-      "Complete rubric breakdown",
-      "All fixes, strengths & feedback",
+      "Complete grading result",
+      "Full rubric / breakdown",
+      "Fixes, strengths, and feedback",
       "No credit card required",
     ],
   },
@@ -31,26 +37,27 @@ export const PLANS: Record<PlanId, Plan> = {
     name: "Student",
     priceLabel: "$19.99",
     priceCents: 1999,
-    gradeLimit: 10,
+    gradeLimit: 15,
     limitScope: "billing_period",
     features: [
-      "10 grading attempts / billing period",
-      "Initial grades and re-grades",
-      "Full draft progression history",
+      "15 successful grading attempts per billing period",
+      "Initial grades and re-grades both count as attempts",
+      "Full grading history",
       "Cancel anytime",
     ],
   },
   student_plus: {
     id: "student_plus",
     name: "Student Plus",
-    priceLabel: "$29.99",
-    priceCents: 2999,
-    gradeLimit: 20,
+    priceLabel: "$49.99",
+    priceCents: 4999,
+    gradeLimit: 30,
     limitScope: "billing_period",
     features: [
-      "20 grading attempts / billing period",
-      "Everything in Student",
-      "Best value for revision-heavy work",
+      "30 successful grading attempts per billing period",
+      "Initial grades and re-grades both count as attempts",
+      "Full grading history",
+      "Best for students who grade / revise frequently",
       "Cancel anytime",
     ],
   },
