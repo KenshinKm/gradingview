@@ -142,7 +142,18 @@ migration.
   - Site URL: `http://localhost:3000` (dev) / your domain (prod)
   - Redirect URLs: add `http://localhost:3000/auth/callback` and
     `https://YOUR_DOMAIN/auth/callback`
-- For fastest local testing you can disable "Confirm email".
+**Email confirmation.** Supabase's built-in email sender is heavily
+rate-limited and isn't meant for production. Migration `0005` installs a
+`dev_autoconfirm_email` trigger that auto-confirms new signups so password
+auth works instantly in development with no emails sent.
+
+**Before production:** set up custom SMTP (**Authentication → Emails → SMTP**,
+e.g. Resend / SendGrid), then drop the trigger to enforce real verification:
+
+```sql
+drop trigger if exists dev_autoconfirm_email on auth.users;
+drop function if exists public.dev_autoconfirm_email();
+```
 
 ### 6. Configure the LLM API
 
