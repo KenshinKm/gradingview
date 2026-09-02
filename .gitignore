@@ -11,3 +11,6 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 coverage/
+
+# local deploy notes (contains keys)
+DEPLOY.md

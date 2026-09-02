@@ -18,23 +18,18 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: "GradingView",
     type: "website",
+    images: [{ url: "/og.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "GradingView — Know Your Grade Before You Submit",
     description:
       "Get an AI-powered estimated grade and rubric breakdown before you submit.",
+    images: ["/og.png"],
   },
   icons: {
-    icon: [
-      {
-        url:
-          "data:image/svg+xml," +
-          encodeURIComponent(
-            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#2f56d6"/><text x="16" y="22" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">G</text></svg>`,
-          ),
-      },
-    ],
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
   },
 };
 
