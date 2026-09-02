@@ -36,7 +36,7 @@ export function DeleteAssignmentButton({ assignmentId }: { assignmentId: string 
   return (
     <div className="flex gap-2">
       <button
-        className="btn border border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/150/100/20"
+        className="btn border border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
         onClick={del}
         disabled={busy}
       >
