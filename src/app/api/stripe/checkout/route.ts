@@ -65,15 +65,14 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ url: session.url });
   } catch (err) {
+    const msg =
+      err instanceof Error
+        ? `${err.name}: ${err.message}`
+        : String(err);
     console.error("stripe/checkout error:", err);
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error
-            ? err.message
-            : "Could not start checkout. Please try again.",
-      },
-      { status: 500 },
+    return new Response(
+      JSON.stringify({ error: msg, stack: (err as Error)?.stack ?? null }),
+      { status: 500, headers: { "content-type": "application/json" } },
     );
   }
 }
