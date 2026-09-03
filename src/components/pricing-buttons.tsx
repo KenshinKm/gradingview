@@ -34,8 +34,12 @@ export function PricingButtons({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.url) throw new Error(data.error || "Checkout failed.");
+      const data = await res.json().catch(() => ({}) as { url?: string; error?: string });
+      if (!res.ok || !data.url) {
+        throw new Error(
+          data.error || `Checkout failed (${res.status}). Please try again.`,
+        );
+      }
       window.location.href = data.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Checkout failed.");
