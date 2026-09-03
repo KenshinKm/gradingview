@@ -69,6 +69,16 @@ export function AuthPanel({
           return;
         }
 
+        // Supabase returns an obfuscated user with no identities when the email
+        // is already registered. Send them to log in instead of "check email".
+        if (!error && data.user && (data.user.identities?.length ?? 0) === 0) {
+          setMode("login");
+          setError(
+            "You already have an account with this email — enter your password to log in.",
+          );
+          return;
+        }
+
         // No session yet — the account may still have been created (e.g. the
         // built-in confirmation email was rate-limited, but the row exists and
         // is auto-confirmed). Try to sign in with the same credentials.
