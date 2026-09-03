@@ -6,6 +6,7 @@ import { priceIdForPlan, type PlanId } from "@/lib/plans";
 import { SITE_URL, stripeConfigured } from "@/lib/env";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 // diagnostic: confirms the route module loads at all
 export async function GET() {

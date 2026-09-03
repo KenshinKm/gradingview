@@ -5,6 +5,7 @@ import { getStripe } from "@/lib/stripe";
 import { SITE_URL, stripeConfigured } from "@/lib/env";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 export async function POST() {
   try {

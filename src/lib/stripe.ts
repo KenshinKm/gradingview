@@ -10,7 +10,11 @@ export function getStripe(): Stripe {
   }
   if (!cached) {
     cached = new Stripe(stripeEnv.secretKey, {
-      apiVersion: "2025-02-24.acacia",
+      // Use fetch (works reliably on Vercel serverless — the default Node
+      // http agent can fail to connect there with keep-alive sockets).
+      httpClient: Stripe.createFetchHttpClient(),
+      maxNetworkRetries: 2,
+      timeout: 20_000,
     });
   }
   return cached;
