@@ -10,21 +10,44 @@ export const maxDuration = 30;
 
 // diagnostic
 export async function GET() {
-  let stripePing: string;
-  try {
-    const t0 = Date.now();
-    await getStripe().balance.retrieve();
-    stripePing = `ok ${Date.now() - t0}ms`;
-  } catch (e) {
-    stripePing = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-  }
-  return NextResponse.json({
+  const out: Record<string, unknown> = {
     ok: true,
-    build: "800c95e+fetchclient",
+    build: "diag2",
     stripeConfigured: stripeConfigured(),
     siteUrl: SITE_URL,
-    stripePing,
-  });
+  };
+
+  // 1. raw fetch to a neutral host
+  try {
+    const r = await fetch("https://example.com", { cache: "no-store" });
+    out.rawExampleCom = `${r.status}`;
+  } catch (e) {
+    out.rawExampleCom = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  }
+
+  // 2. raw fetch to Stripe (bypass the SDK)
+  try {
+    const t0 = Date.now();
+    const r = await fetch("https://api.stripe.com/v1/balance", {
+      headers: {
+        Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+      },
+      cache: "no-store",
+    });
+    out.rawStripe = `${r.status} in ${Date.now() - t0}ms`;
+  } catch (e) {
+    out.rawStripe = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  }
+
+  // 3. via SDK
+  try {
+    await getStripe().balance.retrieve();
+    out.sdkStripe = "ok";
+  } catch (e) {
+    out.sdkStripe = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  }
+
+  return NextResponse.json(out);
 }
 
 export async function POST(req: NextRequest) {
