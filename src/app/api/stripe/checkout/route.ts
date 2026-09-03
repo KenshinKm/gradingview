@@ -8,57 +8,6 @@ import { SITE_URL, stripeConfigured } from "@/lib/env";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-// diagnostic
-export async function GET() {
-  const out: Record<string, unknown> = {
-    ok: true,
-    build: "diag2",
-    stripeConfigured: stripeConfigured(),
-    siteUrl: SITE_URL,
-  };
-
-  // 1. raw fetch to a neutral host
-  try {
-    const r = await fetch("https://example.com", { cache: "no-store" });
-    out.rawExampleCom = `${r.status}`;
-  } catch (e) {
-    out.rawExampleCom = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-  }
-
-  // key shape (safe: no full value)
-  const k = process.env.STRIPE_SECRET_KEY ?? "";
-  out.keyLen = k.length;
-  out.keyPrefix = k.slice(0, 8);
-  out.keySuffix = k.slice(-4);
-  out.keyNonAscii = [...k]
-    .map((c, i) => (c.charCodeAt(0) > 127 ? `${i}:${c.charCodeAt(0)}` : null))
-    .filter(Boolean);
-
-  // 2. raw fetch to Stripe (bypass the SDK)
-  try {
-    const t0 = Date.now();
-    const r = await fetch("https://api.stripe.com/v1/balance", {
-      headers: {
-        Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
-      },
-      cache: "no-store",
-    });
-    out.rawStripe = `${r.status} in ${Date.now() - t0}ms`;
-  } catch (e) {
-    out.rawStripe = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-  }
-
-  // 3. via SDK
-  try {
-    await getStripe().balance.retrieve();
-    out.sdkStripe = "ok";
-  } catch (e) {
-    out.sdkStripe = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-  }
-
-  return NextResponse.json(out);
-}
-
 export async function POST(req: NextRequest) {
   try {
     if (!stripeConfigured()) {
@@ -108,14 +57,15 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    const msg =
-      err instanceof Error
-        ? `${err.name}: ${err.message}`
-        : String(err);
     console.error("stripe/checkout error:", err);
-    return new Response(
-      JSON.stringify({ error: msg, stack: (err as Error)?.stack ?? null }),
-      { status: 500, headers: { "content-type": "application/json" } },
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "Could not start checkout. Please try again.",
+      },
+      { status: 500 },
     );
   }
 }
