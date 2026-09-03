@@ -7,6 +7,15 @@ import { SITE_URL, stripeConfigured } from "@/lib/env";
 
 export const runtime = "nodejs";
 
+// diagnostic: confirms the route module loads at all
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    stripeConfigured: stripeConfigured(),
+    siteUrl: SITE_URL,
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!stripeConfigured()) {
