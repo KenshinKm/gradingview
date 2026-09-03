@@ -25,6 +25,15 @@ export async function GET() {
     out.rawExampleCom = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
   }
 
+  // key shape (safe: no full value)
+  const k = process.env.STRIPE_SECRET_KEY ?? "";
+  out.keyLen = k.length;
+  out.keyPrefix = k.slice(0, 8);
+  out.keySuffix = k.slice(-4);
+  out.keyNonAscii = [...k]
+    .map((c, i) => (c.charCodeAt(0) > 127 ? `${i}:${c.charCodeAt(0)}` : null))
+    .filter(Boolean);
+
   // 2. raw fetch to Stripe (bypass the SDK)
   try {
     const t0 = Date.now();
