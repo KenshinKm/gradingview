@@ -8,12 +8,22 @@ import { SITE_URL, stripeConfigured } from "@/lib/env";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-// diagnostic: confirms the route module loads at all
+// diagnostic
 export async function GET() {
+  let stripePing: string;
+  try {
+    const t0 = Date.now();
+    await getStripe().balance.retrieve();
+    stripePing = `ok ${Date.now() - t0}ms`;
+  } catch (e) {
+    stripePing = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  }
   return NextResponse.json({
     ok: true,
+    build: "800c95e+fetchclient",
     stripeConfigured: stripeConfigured(),
     siteUrl: SITE_URL,
+    stripePing,
   });
 }
 
