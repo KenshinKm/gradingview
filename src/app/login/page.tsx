@@ -22,8 +22,16 @@ export default async function LoginPage() {
             <LoginForm />
           </Suspense>
           <p className="mt-6 text-center text-xs text-ink-muted">
-            By continuing you agree that GradingView provides an AI-generated
-            estimate, not a guaranteed grade.
+            By continuing you agree to our{" "}
+            <Link href="/terms" className="underline hover:text-ink-soft">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline hover:text-ink-soft">
+              Privacy Policy
+            </Link>
+            . GradingView provides an AI-generated estimate, not a guaranteed
+            grade.
           </p>
           <p className="mt-4 text-center text-sm text-ink-muted">
             <Link href="/" className="hover:text-ink">

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { Disclaimer } from "@/components/disclaimer";
 import { GradeForm } from "@/components/grade-form";
@@ -122,7 +123,15 @@ export default function LandingPage() {
 
       <footer className="border-t border-line py-8">
         <div className="container-page flex flex-col gap-3 text-sm text-ink-muted sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} GradingView</span>
+          <div className="flex items-center gap-4">
+            <span>© {new Date().getFullYear()} GradingView</span>
+            <Link href="/terms" className="hover:text-ink-soft">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-ink-soft">
+              Privacy
+            </Link>
+          </div>
           <span className="max-w-lg">
             A rough AI estimate based on the materials you provide. It can make
             mistakes, and your instructor&apos;s actual grade may differ. Not for

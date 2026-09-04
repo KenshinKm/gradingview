@@ -105,7 +105,15 @@ export default async function PricingPage({
         </p>
         <p className="mx-auto mt-3 max-w-2xl text-center text-xs text-ink-muted">
           All purchases are non-refundable. You can cancel anytime to stop
-          future charges.
+          future charges. See our{" "}
+          <Link href="/terms" className="underline hover:text-ink-soft">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline hover:text-ink-soft">
+            Privacy Policy
+          </Link>
+          .
         </p>
       </main>
     </div>
