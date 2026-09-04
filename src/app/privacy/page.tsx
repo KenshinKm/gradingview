@@ -10,7 +10,7 @@ export default function PrivacyPage() {
       <p>
         This Privacy Policy explains what information GradingView collects,
         how we use it, and the choices you have. We built GradingView to
-        handle your schoolwork the way we&apos;d want our own handled — kept
+        handle your schoolwork the way we&apos;d want our own handled: kept
         private, used only to grade your work, and easy to delete.
       </p>
 
@@ -19,13 +19,13 @@ export default function PrivacyPage() {
           <li>
             <strong>Account info:</strong> your email address and an
             encrypted password (handled by our authentication provider,
-            Supabase — we never see or store your raw password).
+            Supabase; we never see or store your raw password).
           </li>
           <li>
             <strong>Your submissions:</strong> the grading materials and work
-            you upload or paste — rubrics, instructions, essays, worksheets,
-            photos, and any text extracted from them — plus the assignment
-            title, course, and citation style if you provide them.
+            you upload or paste, including rubrics, instructions, essays,
+            worksheets, photos, and any text extracted from them, plus the
+            assignment title, course, and citation style if you provide them.
           </li>
           <li>
             <strong>Grading results:</strong> the estimated grade, breakdown,
@@ -64,7 +64,7 @@ export default function PrivacyPage() {
           To generate an estimate, the text and images you submit are sent to
           our AI provider (currently Anthropic) solely to produce your
           grading result. We configure this processing to evaluate your
-          submission — it is not used by GradingView to train our own models.
+          submission; it is not used by GradingView to train our own models.
           Our AI provider processes the request under its own API terms,
           which restrict use of API data for model training.
         </p>
@@ -88,18 +88,18 @@ export default function PrivacyPage() {
         </p>
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <strong>Supabase</strong> — database, authentication, file
+            <strong>Supabase</strong>: database, authentication, file
             storage
           </li>
           <li>
-            <strong>Anthropic</strong> (or another configured AI provider) —
+            <strong>Anthropic</strong> (or another configured AI provider):
             processes your submission to generate a grading estimate
           </li>
           <li>
-            <strong>Stripe</strong> — payment processing for paid plans
+            <strong>Stripe</strong>: payment processing for paid plans
           </li>
           <li>
-            <strong>Vercel</strong> — application hosting
+            <strong>Vercel</strong>: application hosting
           </li>
         </ul>
         <p>
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
       <LSection title="6. Your choices">
         <p>
           You can delete any assignment and its associated files and grading
-          history at any time from your dashboard — this permanently removes
+          history at any time from your dashboard. This permanently removes
           it from our database and storage. To delete your entire account,
           email us and we&apos;ll remove your data, subject to what we&apos;re
           required to retain for billing/legal records.

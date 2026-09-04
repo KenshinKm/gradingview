@@ -21,7 +21,7 @@ export default function TermsPage() {
           GradingView analyzes grading materials you provide (a rubric,
           assignment instructions, an answer key, etc.) together with your
           completed work, and returns an <strong>AI-generated estimate</strong>{" "}
-          of how that work might be graded — a percentage, a letter grade, a
+          of how that work might be graded: a percentage, a letter grade, a
           category breakdown, and suggested improvements.
         </p>
         <p>
@@ -35,7 +35,7 @@ export default function TermsPage() {
       <LSection title="2. Not for use during an exam">
         <p>
           GradingView is a study and revision tool for work you have already
-          completed — drafts, homework, practice material. It is{" "}
+          completed (drafts, homework, practice material). It is{" "}
           <strong>
             not intended for use during an active or proctored exam
           </strong>{" "}
@@ -59,11 +59,11 @@ export default function TermsPage() {
 
       <LSection title="4. Your content">
         <p>
-          You keep ownership of everything you upload or paste — rubrics,
-          assignments, essays, photos, and any other materials
+          You keep ownership of everything you upload or paste, including
+          rubrics, assignments, essays, photos, and any other materials
           (&quot;Your Content&quot;). By submitting Your Content, you grant us
-          a limited license to process it — including sending it to our AI
-          provider and storing it in your private account — solely to provide
+          a limited license to process it, including sending it to our AI
+          provider and storing it in your private account, solely to provide
           the Service to you.
         </p>
         <p>
@@ -78,7 +78,7 @@ export default function TermsPage() {
         <p>
           GradingView offers a free plan (one lifetime grade) and paid
           subscription plans billed monthly through Stripe. Successful
-          grading attempts — initial grades and re-grades alike — count
+          grading attempts, both initial grades and re-grades, count
           against your plan&apos;s limit for the current billing period; a
           failed or errored attempt never does. Paid usage resets on your
           Stripe billing period (the date you subscribed), not the calendar
@@ -90,8 +90,8 @@ export default function TermsPage() {
             All purchases are non-refundable, including partial billing
             periods.
           </strong>{" "}
-          You can cancel anytime from your dashboard&apos;s billing portal —
-          canceling stops future renewals, and you keep access through the
+          You can cancel anytime from your dashboard&apos;s billing portal.
+          Canceling stops future renewals, and you keep access through the
           end of the period you already paid for.
         </p>
       </LSection>
@@ -124,8 +124,8 @@ export default function TermsPage() {
         </p>
         <p>
           TO THE MAXIMUM EXTENT PERMITTED BY LAW, GRADINGVIEW IS NOT LIABLE
-          FOR ANY INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES — INCLUDING
-          ACADEMIC OUTCOMES OR GRADES — ARISING FROM YOUR USE OF THE SERVICE.
+          FOR ANY INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING
+          ACADEMIC OUTCOMES OR GRADES, ARISING FROM YOUR USE OF THE SERVICE.
           OUR TOTAL LIABILITY FOR ANY CLAIM IS LIMITED TO THE AMOUNT YOU PAID
           US IN THE 12 MONTHS BEFORE THE CLAIM AROSE.
         </p>
