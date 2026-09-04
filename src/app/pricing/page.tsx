@@ -103,6 +103,10 @@ export default async function PricingPage({
           your Stripe billing period, not the calendar month. GradingView provides
           an AI-generated estimate; your instructor&apos;s actual grade may vary.
         </p>
+        <p className="mx-auto mt-3 max-w-2xl text-center text-xs text-ink-muted">
+          All purchases are non-refundable. You can cancel anytime to stop
+          future charges.
+        </p>
       </main>
     </div>
   );
