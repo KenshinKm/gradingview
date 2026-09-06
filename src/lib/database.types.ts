@@ -258,6 +258,7 @@ export type Database = {
           event_type: string
           grading_attempt_id: string | null
           id: string
+          ip_hash: string | null
           period_end: string | null
           period_start: string | null
           plan: string
@@ -268,6 +269,7 @@ export type Database = {
           event_type: string
           grading_attempt_id?: string | null
           id?: string
+          ip_hash?: string | null
           period_end?: string | null
           period_start?: string | null
           plan: string
@@ -278,6 +280,7 @@ export type Database = {
           event_type?: string
           grading_attempt_id?: string | null
           id?: string
+          ip_hash?: string | null
           period_end?: string | null
           period_start?: string | null
           plan?: string

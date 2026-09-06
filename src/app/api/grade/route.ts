@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getEntitlement, recordUsage } from "@/lib/entitlements";
+import {
+  getEntitlement,
+  recordUsage,
+  countRecentFreeGradesByIp,
+} from "@/lib/entitlements";
+import { clientIpHash } from "@/lib/client-ip";
+import { isFreeGradeIpBlocked } from "@/lib/free-grade-ip";
 import { rateLimit } from "@/lib/rate-limit";
 import { processUpload } from "@/lib/uploads";
 import { gradeSubmission } from "@/lib/grading/service";
@@ -28,6 +34,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const ipHash = clientIpHash(req.headers);
+
   // ---------- entitlement (server-authoritative) ----------
   const entitlement = await getEntitlement(user.id);
   if (!entitlement.canGrade) {
@@ -48,6 +56,29 @@ export async function POST(req: NextRequest) {
       },
       { status: 402 },
     );
+  }
+
+  // ---------- per-network free-grade limit ----------
+  // Stops one person farming free grades with throwaway emails. Free tier only;
+  // paying users are never IP-limited. Fails open if the count query errors —
+  // the per-account free-grade gate above still applies.
+  if (entitlement.plan === "free" && !entitlement.devBypass && ipHash) {
+    try {
+      const usedInWindow = await countRecentFreeGradesByIp(ipHash);
+      if (isFreeGradeIpBlocked({ ipHash, usedInWindow })) {
+        track("paywall_viewed", { reason: "free_ip_limit" });
+        return NextResponse.json(
+          {
+            error:
+              "You've hit the free-grade limit for your current network. This can happen on shared or campus WiFi — it resets in a few days, or you can upgrade for unlimited grading.",
+            code: "free_ip_limit",
+          },
+          { status: 429 },
+        );
+      }
+    } catch {
+      // fail open
+    }
   }
 
   // ---------- parse input ----------
@@ -253,7 +284,7 @@ export async function POST(req: NextRequest) {
       .eq("id", attempt.id);
 
     // Record usage ONLY after a successful, valid, persisted result.
-    await recordUsage(user.id, attempt.id, entitlement);
+    await recordUsage(user.id, attempt.id, entitlement, ipHash);
 
     track("grading_completed", { draft: draftNumber, score: result.score });
     if (entitlement.plan === "free") track("free_grade_used");

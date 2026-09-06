@@ -6,6 +6,7 @@ import {
   isActiveStatus,
   type EntitlementDecision,
 } from "@/lib/entitlements-core";
+import { FREE_GRADE_IP_WINDOW_DAYS } from "@/lib/free-grade-ip";
 import type { PlanId } from "@/lib/plans";
 
 export type Entitlement = EntitlementDecision;
@@ -64,6 +65,28 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
 }
 
 /**
+ * Successful free grades recorded for a hashed client IP within the rolling
+ * per-network window. Used to rate-limit free-tier abuse from throwaway
+ * accounts. Throws on query failure so the caller can decide to fail open.
+ */
+export async function countRecentFreeGradesByIp(ipHash: string): Promise<number> {
+  const admin = createSupabaseAdminClient();
+  const since = new Date(
+    Date.now() - FREE_GRADE_IP_WINDOW_DAYS * 86_400_000,
+  ).toISOString();
+
+  const { count, error } = await admin
+    .from("usage_events")
+    .select("id", { count: "exact", head: true })
+    .eq("event_type", "free_grade")
+    .eq("ip_hash", ipHash)
+    .gte("created_at", since);
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
  * Record a consumed grading credit. Call ONLY after a successful, valid
  * grading result has been persisted.
  */
@@ -71,6 +94,7 @@ export async function recordUsage(
   userId: string,
   gradingAttemptId: string,
   entitlement: Entitlement,
+  ipHash?: string | null,
 ): Promise<void> {
   const admin = createSupabaseAdminClient();
   const isFree = entitlement.plan === "free";
@@ -82,6 +106,7 @@ export async function recordUsage(
     plan: entitlement.plan,
     period_start: entitlement.periodStart,
     period_end: entitlement.periodEnd,
+    ip_hash: ipHash ?? null,
   });
 
   if (isFree) {

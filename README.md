@@ -82,6 +82,11 @@ that section is clearly labeled **AI-inferred** — it never pretends a key exis
   month (subscribe Sept 17 → resets ~Oct 17).
 - The frontend never sends usage counts; `getEntitlement()` always recomputes
   from `subscriptions` + `usage_events`.
+- **Per-network free-grade cap:** successful free grades are limited per client
+  IP (salted hash) over a rolling 7-day window — `FREE_GRADE_IP_LIMIT` (default
+  `3`). Blunts throwaway-email farming without an email-verification step. Free
+  tier only; paying users are never IP-limited. Fails open if the client IP is
+  unknown or the count query errors. Set `IP_HASH_SALT` in production.
 
 ### Billing modes
 
