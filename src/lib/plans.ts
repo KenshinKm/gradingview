@@ -35,8 +35,8 @@ export const PLANS: Record<PlanId, Plan> = {
   student: {
     id: "student",
     name: "Student",
-    priceLabel: "$19.99",
-    priceCents: 1999,
+    priceLabel: "$9.99",
+    priceCents: 999,
     gradeLimit: 15,
     limitScope: "billing_period",
     features: [
@@ -49,8 +49,8 @@ export const PLANS: Record<PlanId, Plan> = {
   student_plus: {
     id: "student_plus",
     name: "Student Plus",
-    priceLabel: "$49.99",
-    priceCents: 4999,
+    priceLabel: "$19.99",
+    priceCents: 1999,
     gradeLimit: 30,
     limitScope: "billing_period",
     features: [

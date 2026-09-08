@@ -193,9 +193,9 @@ Open <http://localhost:3000>, create an account, and grade something.
 
 In the Stripe Dashboard (test mode):
 
-1. **Product: "GradingView Student"** → recurring price **$19.99 / month** →
+1. **Product: "GradingView Student"** → recurring price **$9.99 / month** →
    copy the price id → `STRIPE_STUDENT_PRICE_ID`.
-2. **Product: "GradingView Student Plus"** → recurring price **$49.99 / month**
+2. **Product: "GradingView Student Plus"** → recurring price **$19.99 / month**
    → copy the price id → `STRIPE_STUDENT_PLUS_PRICE_ID`.
 3. **Developers → API keys**: `STRIPE_SECRET_KEY`,
    `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
