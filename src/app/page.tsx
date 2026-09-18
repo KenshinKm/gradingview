@@ -7,7 +7,7 @@ const STEPS = [
   {
     n: 1,
     t: "Add your grading materials",
-    d: "Rubric, instructions, or answer key — however it's graded.",
+    d: "Rubric, instructions, or answer key, however it's graded.",
   },
   {
     n: 2,
@@ -22,7 +22,7 @@ const STEPS = [
   {
     n: 4,
     t: "Fix what matters",
-    d: "Prioritized, specific changes — not generic advice.",
+    d: "Prioritized, specific changes, not generic advice.",
   },
   {
     n: 5,
