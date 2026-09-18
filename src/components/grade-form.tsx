@@ -62,16 +62,9 @@ const WORK_TYPES = [
 
 function ExampleChips({ items }: { items: string[] }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-1.5">
-      {items.map((it) => (
-        <span
-          key={it}
-          className="rounded-md border border-line bg-surface-raised px-2 py-0.5 text-[11px] font-medium text-ink-muted"
-        >
-          {it}
-        </span>
-      ))}
-    </div>
+    <p className="mt-1.5 text-xs text-ink-muted">
+      Examples: {items.join(" · ")}
+    </p>
   );
 }
 
@@ -185,7 +178,7 @@ export function GradeForm({
             </span>
             <h2 className="text-base font-semibold text-ink">Grading Materials</h2>
           </div>
-          <p className="mt-1.5 text-sm text-ink-muted">
+          <p className="mt-1.5 text-sm text-ink-soft">
             Upload anything that explains how your work should be graded.
           </p>
           <ExampleChips
@@ -236,7 +229,7 @@ export function GradeForm({
             </span>
             <h2 className="text-base font-semibold text-ink">Your Work</h2>
           </div>
-          <p className="mt-1.5 text-sm text-ink-muted">
+          <p className="mt-1.5 text-sm text-ink-soft">
             Upload your completed work, assignment, test, essay, or written
             responses. Multiple files and photos are fine — keep the pages in
             order.
