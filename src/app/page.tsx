@@ -49,33 +49,33 @@ export default function LandingPage() {
             <p className="mt-4 text-lg font-medium text-ink-soft">
               See your grade before your transcript does.
             </p>
-            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-muted">
+            <p className="mt-5 max-w-md text-xs leading-relaxed text-ink-muted sm:text-[15px]">
               Upload how your work will be graded and your completed work.
               GradingView estimates the grade, breaks down every section, and tells
               you exactly what to fix first.
             </p>
 
-            <div className="mt-6 flex items-center gap-2 text-sm text-ink-muted">
+            <div className="mt-6 flex items-center gap-2 text-[11px] text-ink-muted sm:text-sm">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-grade-a" />
               Your first grade is free. No card required.
             </div>
 
             <dl className="mt-8 grid max-w-md grid-cols-3 gap-4 border-t border-line pt-6">
               <div>
-                <dt className="text-xs text-ink-muted">Works with</dt>
-                <dd className="mt-1 text-sm font-medium text-ink-soft">
+                <dt className="text-[10px] text-ink-muted sm:text-xs">Works with</dt>
+                <dd className="mt-1 text-xs font-medium text-ink-soft sm:text-sm">
                   PDF · DOCX · photos
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-ink-muted">Handles</dt>
-                <dd className="mt-1 text-sm font-medium text-ink-soft">
+                <dt className="text-[10px] text-ink-muted sm:text-xs">Handles</dt>
+                <dd className="mt-1 text-xs font-medium text-ink-soft sm:text-sm">
                   essays · tests · quizzes
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-ink-muted">Answer in</dt>
-                <dd className="mt-1 text-sm font-medium text-ink-soft">
+                <dt className="text-[10px] text-ink-muted sm:text-xs">Answer in</dt>
+                <dd className="mt-1 text-xs font-medium text-ink-soft sm:text-sm">
                   ~30 seconds
                 </dd>
               </div>
