@@ -10,6 +10,8 @@ export interface UploaderProps {
   accept: string;
   hint: string;
   idPrefix: string;
+  /** Caps how many files this uploader will hold. Extra selections are dropped. */
+  maxFiles?: number;
 }
 
 /**
@@ -17,12 +19,20 @@ export interface UploaderProps {
  * per-file remove / replace, and user-controlled ordering (the order in
  * `files` is the submission order).
  */
-export function FileUploader({ files, onChange, accept, hint, idPrefix }: UploaderProps) {
+export function FileUploader({
+  files,
+  onChange,
+  accept,
+  hint,
+  idPrefix,
+  maxFiles,
+}: UploaderProps) {
   const addRef = useRef<HTMLInputElement>(null);
   const replaceRef = useRef<HTMLInputElement>(null);
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const [urls, setUrls] = useState<(string | null)[]>([]);
+  const atLimit = maxFiles !== undefined && files.length >= maxFiles;
 
   useEffect(() => {
     const next = files.map((f) =>
@@ -34,7 +44,9 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
 
   function add(list: FileList | null) {
     if (!list?.length) return;
-    onChange([...files, ...Array.from(list)]);
+    const incoming = Array.from(list);
+    const room = maxFiles !== undefined ? Math.max(0, maxFiles - files.length) : incoming.length;
+    onChange([...files, ...incoming.slice(0, room)]);
     if (addRef.current) addRef.current.value = "";
   }
   function remove(i: number) {
@@ -59,18 +71,22 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
   return (
     <div className="space-y-2.5">
       <div
-        onClick={() => addRef.current?.click()}
+        onClick={() => !atLimit && addRef.current?.click()}
         onDragOver={(e) => {
+          if (atLimit) return;
           e.preventDefault();
           setDragging(true);
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
           e.preventDefault();
+          if (atLimit) return;
           setDragging(false);
           add(e.dataTransfer.files);
         }}
-        className={`dropzone ${dragging ? "border-brand-400 bg-[#111a2b]" : ""}`}
+        className={`dropzone ${dragging ? "border-brand-400 bg-[#111a2b]" : ""} ${
+          atLimit ? "cursor-default opacity-60" : ""
+        }`}
       >
         <div className="mx-auto mb-2 grid h-9 w-9 place-items-center rounded-lg border border-line-strong bg-surface-raised text-ink-soft">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -84,16 +100,21 @@ export function FileUploader({ files, onChange, accept, hint, idPrefix }: Upload
           </svg>
         </div>
         <p className="text-sm font-medium text-ink-soft">
-          {files.length > 0
-            ? "Add more files"
-            : "Drop files here or click to browse"}
+          {atLimit
+            ? `Maximum ${maxFiles} files`
+            : files.length > 0
+              ? "Add more files"
+              : "Drop files here or click to browse"}
         </p>
-        <p className="mt-1 text-xs text-ink-muted">{hint}</p>
+        <p className="mt-1 text-xs text-ink-muted">
+          {atLimit ? "Remove one to add another." : hint}
+        </p>
         <input
           ref={addRef}
           type="file"
           accept={accept}
           multiple
+          disabled={atLimit}
           className="hidden"
           onChange={(e) => add(e.target.files)}
         />

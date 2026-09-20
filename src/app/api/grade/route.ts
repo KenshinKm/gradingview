@@ -10,6 +10,7 @@ import { clientIpHash } from "@/lib/client-ip";
 import { isFreeGradeIpBlocked } from "@/lib/free-grade-ip";
 import { rateLimit } from "@/lib/rate-limit";
 import { processUpload, loadPriorMaterialImages } from "@/lib/uploads";
+import { MAX_FILES_PER_SECTION } from "@/lib/upload-limits";
 import { gradeSubmission } from "@/lib/grading/service";
 import { UnreadableImageError } from "@/lib/grading/normalize";
 import type { ImagePart } from "@/lib/grading/llm";
@@ -101,6 +102,16 @@ export async function POST(req: NextRequest) {
   // FormData preserves append order -> user-defined page order.
   const materialFiles = form.getAll("material_files").filter(isFile);
   const workFiles = form.getAll("work_files").filter(isFile);
+
+  if (materialFiles.length > MAX_FILES_PER_SECTION || workFiles.length > MAX_FILES_PER_SECTION) {
+    return NextResponse.json(
+      {
+        error: `You can attach up to ${MAX_FILES_PER_SECTION} files per section.`,
+        code: "too_many_files",
+      },
+      { status: 400 },
+    );
+  }
 
   const hasMaterialSource =
     pastedMaterials.length > 0 || materialFiles.length > 0 || !!existingAssignmentId;

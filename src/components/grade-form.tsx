@@ -7,6 +7,7 @@ import { track } from "@/lib/analytics";
 import type { Assignment } from "@/lib/types";
 import { FileUploader } from "./file-uploader";
 import { GradingLoader } from "./grading-loader";
+import { MAX_FILES_PER_SECTION } from "@/lib/upload-limits";
 
 // The auth modal (and its Supabase client) only loads if an unauthenticated
 // visitor actually tries to grade — keeps it out of the initial bundle.
@@ -212,6 +213,7 @@ export function GradeForm({
               accept={ACCEPT}
               hint={HINT}
               idPrefix="mat"
+              maxFiles={MAX_FILES_PER_SECTION}
             />
             <PhotoTip />
             <details className="group mt-3">
@@ -249,6 +251,7 @@ export function GradeForm({
               accept={ACCEPT}
               hint={HINT}
               idPrefix="work"
+              maxFiles={MAX_FILES_PER_SECTION}
             />
             <PhotoTip />
             <details className="group mt-3">
