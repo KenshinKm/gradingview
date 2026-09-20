@@ -9,7 +9,7 @@ import {
 import { clientIpHash } from "@/lib/client-ip";
 import { isFreeGradeIpBlocked } from "@/lib/free-grade-ip";
 import { rateLimit } from "@/lib/rate-limit";
-import { processUpload } from "@/lib/uploads";
+import { processUpload, loadPriorMaterialImages } from "@/lib/uploads";
 import { gradeSubmission } from "@/lib/grading/service";
 import { UnreadableImageError } from "@/lib/grading/normalize";
 import type { ImagePart } from "@/lib/grading/llm";
@@ -124,6 +124,7 @@ export async function POST(req: NextRequest) {
   // ---------- assignment (create or reuse for re-grade) ----------
   let assignmentId = existingAssignmentId;
   let priorMaterialsText = "";
+  let priorMaterialImages: ImagePart[] = [];
   if (assignmentId) {
     const { data: existing } = await admin
       .from("assignments")
@@ -134,6 +135,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
     }
     priorMaterialsText = existing.grading_materials_text ?? "";
+    priorMaterialImages = await loadPriorMaterialImages(assignmentId);
   } else {
     const { data: created, error } = await admin
       .from("assignments")
@@ -164,7 +166,7 @@ export async function POST(req: NextRequest) {
 
   // ---------- process files (preserving order) ----------
   const materialTexts: string[] = [];
-  const materialImages: ImagePart[] = [];
+  const materialImages: ImagePart[] = [...priorMaterialImages];
   const workTexts: string[] = [];
   const workImages: ImagePart[] = [];
   const fileErrors: string[] = [];

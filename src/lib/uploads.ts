@@ -9,6 +9,39 @@ import {
 } from "@/lib/extraction";
 import type { ImagePart } from "@/lib/grading/llm";
 
+/**
+ * Re-grade materials only carry forward as `grading_materials_text` on the
+ * assignment row, which is empty when the original materials were photos
+ * (extraction never turns an image into text). Re-fetch and re-extract those
+ * images from storage so "your original materials are kept automatically"
+ * actually holds for photographed rubrics, not just typed/PDF ones.
+ */
+export async function loadPriorMaterialImages(
+  assignmentId: string,
+): Promise<ImagePart[]> {
+  const admin = createSupabaseAdminClient();
+  const { data: files } = await admin
+    .from("submission_files")
+    .select("storage_path, original_name, mime_type")
+    .eq("assignment_id", assignmentId)
+    .eq("role", "grading_material")
+    .order("sort_order", { ascending: true });
+
+  if (!files || files.length === 0) return [];
+
+  const images: ImagePart[] = [];
+  for (const f of files) {
+    const { data: blob } = await admin.storage
+      .from(supabaseEnv.bucket)
+      .download(f.storage_path);
+    if (!blob) continue;
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    const extracted = await extractFromBuffer(buffer, f.original_name, f.mime_type);
+    if (extracted.image) images.push(extracted.image);
+  }
+  return images;
+}
+
 export interface ProcessedUpload {
   fileId: string;
   role: FileRole;
