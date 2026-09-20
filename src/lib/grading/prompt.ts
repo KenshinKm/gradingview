@@ -59,6 +59,7 @@ Be concise, plain, direct, specific, and actionable. A student should understand
 - Do NOT explain obvious concepts.
 - Explain each issue ONCE. If it's in "things_to_fix", keep it one short line elsewhere (or omit it).
 - Prefer short sentences and fragments over paragraphs.
+- When referring to a plain instructions/requirements document (no rubric, no answer key), call it "the instructions", not "the prompt" — on an AI product, "prompt" reads as an AI prompt. Still say "the rubric" / "the answer key" when those exist.
 
 Per-field length limits:
 - "grading_basis_note": ONE short sentence, or "".
