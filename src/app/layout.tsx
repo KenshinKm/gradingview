@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { SITE_URL } from "@/lib/env";
+import { TikTokPixel } from "@/components/tiktok-pixel";
+import { isValidPixelId, trackingAllowed } from "@/lib/tiktok-consent";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -35,15 +38,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const pixelId = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID;
+  const tiktokOn = isValidPixelId(pixelId) && trackingAllowed(await headers());
+
   return (
     <html lang="en">
       <body className="min-h-screen bg-canvas font-sans text-ink antialiased">
         {children}
         <Analytics />
         <SpeedInsights />
+        {tiktokOn && <TikTokPixel pixelId={pixelId} />}
       </body>
     </html>
   );

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { track } from "@/lib/analytics";
-import type { PlanId } from "@/lib/plans";
+import { PLANS, type PlanId } from "@/lib/plans";
+import { trackTikTok } from "@/lib/tiktok-client";
 
 export function PricingButtons({
   plan,
@@ -28,6 +29,11 @@ export function PricingButtons({
     setBusy(true);
     setError(null);
     track("checkout_started", { plan });
+    trackTikTok("InitiateCheckout", {
+      value: PLANS[plan].priceCents / 100,
+      currency: "USD",
+      content_id: plan,
+    });
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",

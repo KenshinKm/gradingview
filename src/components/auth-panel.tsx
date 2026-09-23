@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { track } from "@/lib/analytics";
+import { trackTikTok } from "@/lib/tiktok-client";
 import { SITE_URL } from "@/lib/env";
 
 type Mode = "signup" | "login";
@@ -65,6 +66,7 @@ export function AuthPanel({
         // signUp returns a session immediately when email confirmation is off.
         if (!error && data.session) {
           track("account_created", { method: "password" });
+          trackTikTok("CompleteRegistration");
           onAuthed();
           return;
         }
@@ -85,6 +87,7 @@ export function AuthPanel({
         const signIn = await supabase.auth.signInWithPassword({ email, password });
         if (!signIn.error && signIn.data.session) {
           track("account_created", { method: "password" });
+          trackTikTok("CompleteRegistration");
           onAuthed();
           return;
         }

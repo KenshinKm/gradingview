@@ -2,7 +2,7 @@ import { LegalPage, LSection } from "@/components/legal-page";
 
 export const metadata = { title: "Privacy Policy" };
 
-const UPDATED = "September 3, 2026";
+const UPDATED = "September 23, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -55,7 +55,9 @@ export default function PrivacyPage() {
         </p>
         <p>
           We do not sell your data, and we do not use your submissions to
-          advertise to you or to anyone else.
+          advertise to you or to anyone else. We do use limited website and
+          signup activity to measure our own advertising on TikTok (see
+          Sections 5 and 8).
         </p>
       </LSection>
 
@@ -83,8 +85,8 @@ export default function PrivacyPage() {
 
       <LSection title="5. Sharing">
         <p>
-          We share data only with the vendors that make the Service work,
-          each bound to use it solely to provide their service to us:
+          We share data only with the vendors that help us run the Service
+          and measure our advertising:
         </p>
         <ul className="list-disc space-y-1 pl-5">
           <li>
@@ -101,6 +103,10 @@ export default function PrivacyPage() {
           <li>
             <strong>Vercel</strong>: application hosting
           </li>
+          <li>
+            <strong>TikTok</strong>: measuring the results of our TikTok
+            advertising (see Section 8)
+          </li>
         </ul>
         <p>
           We do not share your submissions with your school, instructor, or
@@ -115,7 +121,9 @@ export default function PrivacyPage() {
           history at any time from your dashboard. This permanently removes
           it from our database and storage. To delete your entire account,
           email us and we&apos;ll remove your data, subject to what we&apos;re
-          required to retain for billing/legal records.
+          required to retain for billing/legal records. To opt out of
+          advertising measurement, turn on Global Privacy Control in your
+          browser or email us.
         </p>
       </LSection>
 
@@ -130,9 +138,22 @@ export default function PrivacyPage() {
 
       <LSection title="8. Cookies">
         <p>
-          We use only the cookies necessary to keep you signed in
-          (authentication session cookies). We don&apos;t use third-party
-          advertising or tracking cookies.
+          We use cookies that are necessary to keep you signed in
+          (authentication session cookies).
+        </p>
+        <p>
+          We also use the TikTok Pixel and TikTok Events API to measure how
+          our TikTok ads perform. These use cookies and similar technologies
+          and share limited information with TikTok: the pages you view,
+          whether you create an account or subscribe (including the plan and
+          price), a hashed version of your email address, your IP address, and
+          your browser details. We never send your grading materials or your
+          work. TikTok handles this information under its own privacy policy.
+        </p>
+        <p>
+          We do not load the TikTok Pixel for visitors located in the
+          European Economic Area, the United Kingdom, or Switzerland, and we
+          honor the Global Privacy Control signal from your browser.
         </p>
       </LSection>
 

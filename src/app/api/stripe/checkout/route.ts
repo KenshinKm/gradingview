@@ -4,6 +4,7 @@ import { getStripe } from "@/lib/stripe";
 import { ensureStripeCustomer } from "@/lib/subscriptions";
 import { priceIdForPlan, type PlanId } from "@/lib/plans";
 import { SITE_URL, stripeConfigured } from "@/lib/env";
+import { tiktokCheckoutMetadata } from "@/lib/tiktok";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       subscription_data: { metadata: { user_id: user.id } },
-      metadata: { user_id: user.id, plan },
+      metadata: { user_id: user.id, plan, ...tiktokCheckoutMetadata(req) },
       success_url: `${base}/dashboard?checkout=success`,
       cancel_url: `${base}/pricing?checkout=canceled`,
     });

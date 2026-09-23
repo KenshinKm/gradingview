@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
-import { stripeEnv } from "@/lib/env";
+import { SITE_URL, stripeEnv } from "@/lib/env";
+import { sendTikTokEvent } from "@/lib/tiktok";
 import {
   syncSubscriptionFromStripe,
   markSubscriptionCanceled,
@@ -43,6 +44,25 @@ export async function POST(req: NextRequest) {
             session.metadata?.user_id || undefined,
           );
           track("subscription_started", { plan: session.metadata?.plan ?? "" });
+
+          // Only when the visitor was trackable at checkout time (tt_ok).
+          // event_id = session id, so Stripe webhook retries dedupe at TikTok.
+          if (session.metadata?.tt_ok === "1") {
+            await sendTikTokEvent({
+              event: "CompletePayment",
+              eventId: session.id,
+              url: `${SITE_URL}/pricing`,
+              email: session.customer_details?.email ?? session.customer_email,
+              externalId: session.metadata.user_id,
+              ip: session.metadata.tt_ip,
+              userAgent: session.metadata.tt_ua,
+              ttclid: session.metadata.tt_clid,
+              ttp: session.metadata.tt_ttp,
+              value: (session.amount_total ?? 0) / 100,
+              currency: (session.currency ?? "usd").toUpperCase(),
+              contentId: session.metadata.plan,
+            });
+          }
         }
         break;
       }

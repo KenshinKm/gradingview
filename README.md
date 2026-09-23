@@ -72,8 +72,8 @@ that section is clearly labeled **AI-inferred** — it never pretends a key exis
 
 ### Usage / entitlement rules (enforced server-side only)
 
-- Every authenticated user gets **1 free lifetime full grade** (complete result,
-  nothing blurred or withheld).
+- Every authenticated user gets **3 free lifetime full grades** (complete
+  results, nothing blurred or withheld).
 - **Student** = 15 grading attempts / Stripe billing period. **Student Plus** = 30.
 - Every successful initial grade _or_ re-grade = one attempt.
 - **Failed** processing / server errors never consume a credit (`usage_events` is
@@ -84,7 +84,7 @@ that section is clearly labeled **AI-inferred** — it never pretends a key exis
   from `subscriptions` + `usage_events`.
 - **Per-network free-grade cap:** successful free grades are limited per client
   IP (salted hash) over a rolling 7-day window — `FREE_GRADE_IP_LIMIT` (default
-  `3`). Blunts throwaway-email farming without an email-verification step. Free
+  3x the free allotment, i.e. `9`). Blunts throwaway-email farming without an email-verification step. Free
   tier only; paying users are never IP-limited. Fails open if the client IP is
   unknown or the count query errors. Set `IP_HASH_SALT` in production.
 
@@ -93,7 +93,7 @@ that section is clearly labeled **AI-inferred** — it never pretends a key exis
 - **`BILLING_MODE=dev`** (only honored when `NODE_ENV !== "production"`) —
   unlimited local grades, no limits enforced. Use while iterating.
 - **`BILLING_MODE=live`** (the default; forced in production) — real limits:
-  - **Stripe not configured** → the **free tier still works** (1 lifetime grade
+  - **Stripe not configured** → the **free tier still works** (3 lifetime grades
     per user). Paid plans show "coming soon" and checkout is disabled. This is
     the launch-without-Stripe state.
   - **Stripe configured** (`STRIPE_*` env set) → paid plans activate
@@ -101,6 +101,18 @@ that section is clearly labeled **AI-inferred** — it never pretends a key exis
 
 Entitlement is always decided server-side by `getEntitlement()`; the dashboard
 meter is display-only.
+
+### TikTok ads tracking
+
+Set `NEXT_PUBLIC_TIKTOK_PIXEL_ID` (and `TIKTOK_EVENTS_API_TOKEN` for server-side
+events) to enable; unset means nothing loads. Browser events
+(`CompleteRegistration`, `InitiateCheckout`) are mirrored to the Events API via
+`/api/tiktok/event` with a shared `event_id` so TikTok counts each once. The
+purchase (`CompletePayment`) is sent from the Stripe webhook using attribution
+(`ttclid`, `_ttp`, IP, user agent) stored on the Checkout Session metadata.
+Nothing loads or is sent for EEA/UK/CH visitors or when Global Privacy Control is
+on (`src/lib/tiktok-consent.ts`). Never send grading content or work to TikTok.
+Use `TIKTOK_TEST_EVENT_CODE` while verifying in Events Manager > Test Events.
 
 ---
 
