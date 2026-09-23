@@ -2,16 +2,17 @@
 
 import { useEffect } from "react";
 import { track } from "@/lib/analytics";
+import { PLANS } from "@/lib/plans";
+
+const FREE_LIMIT = PLANS.free.gradeLimit;
 
 const COPY: Record<string, string> = {
-  free_grade_used:
-    "You've used your free lifetime grade. Subscribe to keep grading and checking revisions.",
+  free_grade_used: `You've used your ${FREE_LIMIT} free lifetime grades. Subscribe to keep grading and checking revisions.`,
   period_limit_reached:
     "You've used all your grading attempts for this billing period. Upgrade for more, or wait for your period to reset.",
   subscription_inactive:
     "Your subscription isn't active right now. Reactivate to keep grading.",
-  billing_not_configured:
-    "You've used your free grade. Paid plans are coming soon — check back shortly.",
+  billing_not_configured: `You've used your ${FREE_LIMIT} free grades. Paid plans are coming soon — check back shortly.`,
   not_entitled: "You need an active plan to grade your work.",
 };
 

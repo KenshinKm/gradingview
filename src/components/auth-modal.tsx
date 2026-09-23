@@ -59,8 +59,8 @@ export function AuthModal({
             Create your free account to see your grade
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Your first grade is free. No card required. We&apos;ll pick up right
-            where you left off — nothing to re-upload.
+            Your first 3 grades are free. No card required. We&apos;ll pick up
+            right where you left off — nothing to re-upload.
           </p>
         </div>
         <AuthPanel defaultMode="signup" redirectTo={redirectTo} onAuthed={onAuthed} />

@@ -58,16 +58,16 @@ export function UsageMeter({ entitlement }: { entitlement: Entitlement }) {
         <p className="text-sm text-ink-soft">
           {atLimit
             ? paidComingSoon
-              ? "You've used your free grade. Paid plans are coming soon."
+              ? "You've used your free grades. Paid plans are coming soon."
               : isLifetime
-                ? "You've used your free lifetime grade."
+                ? "You've used your free lifetime grades."
                 : `You've used all ${limit} grades for this billing period.`
             : `${remaining} grade${remaining === 1 ? "" : "s"} remaining`}
         </p>
 
         <p className="text-xs text-ink-muted">
           {isLifetime
-            ? "1 lifetime grade — does not reset"
+            ? `${limit} lifetime grades — does not reset`
             : resetDate
               ? `Resets ${resetDate}`
               : "Resets each billing period"}

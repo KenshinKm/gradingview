@@ -57,7 +57,7 @@ export default function LandingPage() {
 
             <div className="mt-6 flex items-center gap-2 text-[11px] text-ink-muted sm:text-sm">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-grade-a" />
-              Your first grade is free. No card required.
+              Your first 3 grades are free. No card required.
             </div>
 
             <dl className="mt-8 grid max-w-md grid-cols-3 gap-4 border-t border-line pt-6">

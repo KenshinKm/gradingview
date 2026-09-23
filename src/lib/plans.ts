@@ -22,10 +22,10 @@ export const PLANS: Record<PlanId, Plan> = {
     name: "Free",
     priceLabel: "$0",
     priceCents: 0,
-    gradeLimit: 1,
+    gradeLimit: 3,
     limitScope: "lifetime",
     features: [
-      "1 lifetime full grade",
+      "3 lifetime full grades",
       "Complete grading result",
       "Full rubric / breakdown",
       "Fixes, strengths, and feedback",

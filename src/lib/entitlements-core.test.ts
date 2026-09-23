@@ -14,8 +14,8 @@ const base: EntitlementInputs = {
 };
 
 describe("plan limits come from PLANS (single source of truth)", () => {
-  it("Student = 15, Student Plus = 30, Free = 1", () => {
-    expect(PLANS.free.gradeLimit).toBe(1);
+  it("Student = 15, Student Plus = 30, Free = 3", () => {
+    expect(PLANS.free.gradeLimit).toBe(3);
     expect(PLANS.student.gradeLimit).toBe(15);
     expect(PLANS.student_plus.gradeLimit).toBe(30);
   });
@@ -28,14 +28,21 @@ describe("free lifetime credit", () => {
     expect(d.limitScope).toBe("lifetime");
     expect(d.canGrade).toBe(true);
     expect(d.used).toBe(0);
-    expect(d.remaining).toBe(1);
+    expect(d.remaining).toBe(3);
   });
 
-  it("blocks after the free grade is used", () => {
-    const d = computeEntitlement({ ...base, freeUsed: 1 });
+  it("allows the second and third free grades", () => {
+    expect(computeEntitlement({ ...base, freeUsed: 1 }).canGrade).toBe(true);
+    expect(computeEntitlement({ ...base, freeUsed: 1 }).remaining).toBe(2);
+    expect(computeEntitlement({ ...base, freeUsed: 2 }).canGrade).toBe(true);
+    expect(computeEntitlement({ ...base, freeUsed: 2 }).remaining).toBe(1);
+  });
+
+  it("blocks after all free grades are used", () => {
+    const d = computeEntitlement({ ...base, freeUsed: 3 });
     expect(d.canGrade).toBe(false);
     expect(d.blockReason).toBe("free_grade_used");
-    expect(d.used).toBe(1);
+    expect(d.used).toBe(3);
     expect(d.remaining).toBe(0);
   });
 
@@ -105,7 +112,7 @@ describe("inactive / canceled subscription", () => {
       ...base,
       subPlan: "student",
       subActive: false,
-      freeUsed: 1,
+      freeUsed: 3,
     });
     expect(d.plan).toBe("free");
     expect(d.canGrade).toBe(false);
@@ -114,15 +121,15 @@ describe("inactive / canceled subscription", () => {
 });
 
 describe("Stripe not configured yet (launch without billing)", () => {
-  it("the free lifetime grade still works", () => {
+  it("the free lifetime grades still work", () => {
     const d = computeEntitlement({ ...base, billingReady: false, freeUsed: 0 });
     expect(d.plan).toBe("free");
     expect(d.canGrade).toBe(true);
-    expect(d.remaining).toBe(1);
+    expect(d.remaining).toBe(3);
   });
 
-  it("blocks once the free grade is spent — paid plans unreachable", () => {
-    const d = computeEntitlement({ ...base, billingReady: false, freeUsed: 1 });
+  it("blocks once all free grades are spent — paid plans unreachable", () => {
+    const d = computeEntitlement({ ...base, billingReady: false, freeUsed: 3 });
     expect(d.canGrade).toBe(false);
     expect(d.blockReason).toBe("billing_not_configured");
   });
@@ -156,9 +163,9 @@ describe("dev bypass", () => {
   });
 
   it("still reports honest usage numbers for the meter", () => {
-    const d = computeEntitlement({ ...base, devBypass: true, freeUsed: 1 });
-    expect(d.used).toBe(1);
-    expect(d.limit).toBe(1);
+    const d = computeEntitlement({ ...base, devBypass: true, freeUsed: 3 });
+    expect(d.used).toBe(3);
+    expect(d.limit).toBe(3);
     expect(d.remaining).toBe(0);
     expect(d.canGrade).toBe(true); // not enforced in dev
   });

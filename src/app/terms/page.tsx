@@ -76,7 +76,7 @@ export default function TermsPage() {
 
       <LSection title="5. Plans, billing, and cancellation">
         <p>
-          GradingView offers a free plan (one lifetime grade) and paid
+          GradingView offers a free plan (a set number of lifetime grades) and paid
           subscription plans billed monthly through Stripe. Successful
           grading attempts, both initial grades and re-grades, count
           against your plan&apos;s limit for the current billing period; a
@@ -100,8 +100,8 @@ export default function TermsPage() {
         <p>You agree not to:</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            Create multiple accounts to obtain more than one free lifetime
-            grade
+            Create multiple accounts to obtain more free lifetime grades than
+            the free plan allows
           </li>
           <li>
             Attempt to bypass, disable, or interfere with usage limits,

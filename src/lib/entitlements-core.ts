@@ -52,7 +52,7 @@ export function isActiveStatus(status: string | null | undefined): boolean {
  * the dev bypass and the "Stripe not configured yet" rule on top of that.
  *
  * When Stripe isn't configured (`billingReady === false`), the FREE tier still
- * works — every user gets their 1 lifetime grade — but paid plans are
+ * works — every user gets their free lifetime grades — but paid plans are
  * unreachable (there's no checkout / no webhook to activate them). This is
  * "fail closed" for *paid* access without bricking the whole product at launch.
  */

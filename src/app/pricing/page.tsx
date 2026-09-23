@@ -38,7 +38,7 @@ export default async function PricingPage({
           </p>
         ) : !stripeConfigured() ? (
           <p className="mx-auto mt-6 max-w-xl rounded-lg border border-line bg-surface-subtle px-4 py-2 text-center text-sm text-ink-soft">
-            Paid plans are launching soon. Your free grade is available now.
+            Paid plans are launching soon. Your free grades are available now.
           </p>
         ) : null}
 
@@ -64,7 +64,7 @@ export default async function PricingPage({
                 </div>
                 <p className="mt-1 text-sm text-ink-muted">
                   {plan.limitScope === "lifetime"
-                    ? `${plan.gradeLimit} lifetime full grade`
+                    ? `${plan.gradeLimit} lifetime full grade${plan.gradeLimit === 1 ? "" : "s"}`
                     : `${plan.gradeLimit} grading attempts / billing period`}
                 </p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm text-ink-soft">

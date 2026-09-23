@@ -48,7 +48,7 @@ export default async function GradePage({
           <p className="mt-1 text-sm text-ink-muted">
             {regrade
               ? "Your grading materials are kept — just add your revised work below. This counts as one grading attempt."
-              : "Upload how your work will be graded, plus your completed work. Your first grade is free."}
+              : "Upload how your work will be graded, plus your completed work. Your first 3 grades are free."}
           </p>
 
           <div className="mt-6">

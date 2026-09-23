@@ -361,7 +361,7 @@ export function GradeForm({
               ? `Add ${hasMaterials ? "" : "grading materials"}${
                   !hasMaterials && !hasWork ? " and " : ""
                 }${hasWork ? "" : "your work"} to continue.`
-              : "Your first grade is free. No card required."}
+              : "Your first 3 grades are free. No card required."}
           </p>
         </div>
       </form>
