@@ -2,34 +2,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { Disclaimer } from "@/components/disclaimer";
 import { GradeForm } from "@/components/grade-form";
-
-const STEPS = [
-  {
-    n: 1,
-    t: "Add your grading materials",
-    d: "Rubric, instructions, or answer key, however it's graded.",
-  },
-  {
-    n: 2,
-    t: "Add your work",
-    d: "Essay, worksheet, quiz, test, or written answers.",
-  },
-  {
-    n: 3,
-    t: "Get your estimated grade",
-    d: "A letter grade, percentage, and likely range.",
-  },
-  {
-    n: 4,
-    t: "Fix what matters",
-    d: "Prioritized, specific changes, not generic advice.",
-  },
-  {
-    n: 5,
-    t: "Re-grade your revision",
-    d: "See whether your estimate improved.",
-  },
-];
+import { HowItWorks } from "@/components/how-it-works";
 
 export default function LandingPage() {
   return (
@@ -83,32 +56,12 @@ export default function LandingPage() {
           </div>
 
           {/* The actual grading interface */}
-          <div className="animate-fade-in">
+          <div id="grade-form" className="animate-fade-in scroll-mt-6">
             <GradeForm variant="landing" />
           </div>
         </section>
 
-        {/* How it works */}
-        <section className="border-t border-line bg-surface-subtle py-14">
-          <div className="container-page">
-            <h2 className="text-xl font-bold tracking-tight text-ink">
-              How it works
-            </h2>
-            <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {STEPS.map((s) => (
-                <div key={s.n} className="panel">
-                  <div className="grid h-7 w-7 place-items-center rounded-lg bg-brand-100 text-sm font-bold text-brand-700">
-                    {s.n}
-                  </div>
-                  <h3 className="mt-3 text-sm font-semibold text-ink">{s.t}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-                    {s.d}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <HowItWorks />
 
         {/* Value prop */}
         <section className="container-page py-16 text-center">
