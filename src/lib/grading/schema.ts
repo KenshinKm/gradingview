@@ -81,6 +81,17 @@ export const usageSchema = z.object({
   cost_usd: z.number().nullable(),
 });
 
+/** One arithmetic check the server re-ran (Math and Science). */
+export const calcReviewSchema = z.object({
+  location: z.string(),
+  what: z.string(),
+  expression: z.string(),
+  computed: z.number().nullable(),
+  claimed: z.number().nullable(),
+  student: z.number().nullable(),
+  status: z.enum(["confirmed", "mismatch", "unverified"]),
+});
+
 export const gradeResultSchema = z.object({
   score: z.number().min(0).max(100),
   letter_grade: z.string().min(1).max(3),
@@ -107,6 +118,7 @@ export const gradeResultSchema = z.object({
   disclaimer: z.string().min(1),
   understood: understoodSchema.optional(),
   needs_check: z.array(needsCheckSchema).optional(),
+  calc_review: z.array(calcReviewSchema).optional(),
   usage: usageSchema.optional(),
 });
 

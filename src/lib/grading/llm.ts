@@ -50,7 +50,8 @@ const ANTHROPIC_IMAGE_TYPES = new Set([
 
 async function callAnthropic(req: LlmRequest, model: string): Promise<LlmResponse> {
   if (!llmEnv.anthropicKey) throw new Error("ANTHROPIC_API_KEY is not set");
-  const client = new Anthropic({ apiKey: llmEnv.anthropicKey });
+  // Fail fast instead of hanging: the grading job has its own hard stop.
+  const client = new Anthropic({ apiKey: llmEnv.anthropicKey, timeout: 240_000, maxRetries: 1 });
 
   const content: Anthropic.MessageParam["content"] = [
     { type: "text", text: req.user },

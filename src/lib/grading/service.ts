@@ -13,6 +13,7 @@ import {
 import type { GradeResult, GradeUsage } from "./schema";
 import { estimateCostUsd } from "@/lib/llm-cost";
 import { LEVEL_LABEL, SUBJECT_LABEL } from "./subjects";
+import { reviewCalcChecks } from "./calc-check";
 
 export interface GradeSubmissionArgs extends GradingInput {
   /** Grading-material images, in user-defined order. */
@@ -96,6 +97,17 @@ export async function gradeSubmission(
         result.understood.subject_code = subject;
         result.understood.level_code = level;
         if (level !== "unspecified") result.understood.level = LEVEL_LABEL[level];
+      }
+      // Math and Science: re-run the grader's arithmetic ourselves.
+      if (subject !== "english") {
+        const { review, needsCheck } = reviewCalcChecks(
+          (json as Record<string, unknown>).calc_checks,
+          { enabled: args.options?.checkCalculations !== false },
+        );
+        if (review.length > 0) result.calc_review = review;
+        if (needsCheck.length > 0) {
+          result.needs_check = [...(result.needs_check ?? []), ...needsCheck].slice(0, 6);
+        }
       }
       const usage: GradeUsage = {
         input_tokens: inputTokens,

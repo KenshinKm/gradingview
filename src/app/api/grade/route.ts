@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
@@ -14,13 +14,14 @@ import { limitsFor, textLimitError } from "@/lib/upload-limits";
 import { parseLevel, parseSubject } from "@/lib/grading/subjects";
 import { parseOptions } from "@/lib/grading/options";
 import { SUBJECT_CONFIG, isSubjectEnabled } from "@/lib/subject-config";
-import { gradeSubmission } from "@/lib/grading/service";
-import { ContextMismatchError, UnreadableImageError } from "@/lib/grading/normalize";
+import { runGradingJob } from "@/lib/grading/job";
+import { STALE_PROCESSING_MS } from "@/lib/grading/timing";
 import type { ImagePart } from "@/lib/grading/llm";
 import { track } from "@/lib/analytics";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// Grading runs after the response (see runGradingJob), so it shares this limit.
+export const maxDuration = 300;
 
 const CITATION_STYLES = new Set(["not_specified", "mla", "apa", "chicago", "other"]);
 
@@ -82,6 +83,29 @@ export async function POST(req: NextRequest) {
       }
     } catch {
       // fail open
+    }
+  }
+
+  // ---------- one grade at a time ----------
+  // Credits are charged when a grade finishes, so parallel submissions could
+  // overspend them. A stuck attempt stops counting after STALE_PROCESSING_MS.
+  {
+    const guard = createSupabaseAdminClient();
+    const since = new Date(Date.now() - STALE_PROCESSING_MS).toISOString();
+    const { count } = await guard
+      .from("grading_attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "processing")
+      .gte("created_at", since);
+    if ((count ?? 0) > 0) {
+      return NextResponse.json(
+        {
+          error: "You already have a grade in progress. Wait for it to finish, then try again.",
+          code: "already_grading",
+        },
+        { status: 409 },
+      );
     }
   }
 
@@ -299,99 +323,34 @@ export async function POST(req: NextRequest) {
 
   track("grading_started", { draft: draftNumber, plan: entitlement.plan });
 
-  // ---------- grade ----------
-  try {
-    const { result } = await gradeSubmission({
-      gradingMaterialsText,
-      workText,
-      assignmentTitle: title,
-      course,
-      citationStyle,
-      materialImages,
-      workImages,
-      subject,
-      level,
-      contextConfirmed,
-      options,
-    });
-
-    await admin
-      .from("grading_attempts")
-      .update({
-        status: "complete",
-        score: result.score,
-        letter_grade: result.letter_grade,
-        estimated_range_low: result.estimated_range_low,
-        estimated_range_high: result.estimated_range_high,
-        scoring_basis: result.scoring_basis,
-        result,
-        inferred_rubric: result.inferred_rubric,
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", attempt.id);
-
-    // Record usage ONLY after a successful, valid, persisted result.
-    await recordUsage(user.id, attempt.id, entitlement, ipHash);
-
-    track("grading_completed", { draft: draftNumber, score: result.score });
-    if (entitlement.plan === "free") track("free_grade_used");
-
-    return NextResponse.json({ attemptId: attempt.id, assignmentId });
-  } catch (err) {
-    // Work clearly doesn't match the materials or subject: ask, DO NOT charge.
-    if (err instanceof ContextMismatchError) {
-      await admin
-        .from("grading_attempts")
-        .update({ status: "failed", error_message: err.studentMessage.slice(0, 500) })
-        .eq("id", attempt.id);
-
-      return NextResponse.json(
-        {
-          error: err.studentMessage,
-          code: "context_mismatch",
-          mismatch: err.mismatch,
-        },
-        { status: 422 },
-      );
-    }
-
-    // Unreadable photo(s): fail the attempt, name the pages, DO NOT charge.
-    if (err instanceof UnreadableImageError) {
-      await admin
-        .from("grading_attempts")
-        .update({
-          status: "failed",
-          error_message: err.studentMessage.slice(0, 500),
-        })
-        .eq("id", attempt.id);
-
-      return NextResponse.json(
-        {
-          error: err.studentMessage,
-          code: "unreadable_image",
-          images: err.images,
-        },
-        { status: 422 },
-      );
-    }
-
-    await admin
-      .from("grading_attempts")
-      .update({
-        status: "failed",
-        error_message: (err as Error).message?.slice(0, 500) ?? "Grading failed",
-      })
-      .eq("id", attempt.id);
-
-    return NextResponse.json(
-      {
-        error:
-          "We couldn't finish grading this submission. Your credit was not used — please try again.",
-        code: "grading_failed",
+  // ---------- grade in the background ----------
+  // The response goes out now; grading finishes after it, even if the student
+  // closes the tab. The client polls /api/grade/status and the results page
+  // shows progress. The credit is charged only when a valid result is saved.
+  after(
+    runGradingJob({
+      attemptId: attempt.id,
+      userId: user.id,
+      draftNumber,
+      entitlement,
+      ipHash,
+      grade: {
+        gradingMaterialsText,
+        workText,
+        assignmentTitle: title,
+        course,
+        citationStyle,
+        materialImages,
+        workImages,
+        subject,
+        level,
+        contextConfirmed,
+        options,
       },
-      { status: 502 },
-    );
-  }
+    }),
+  );
+
+  return NextResponse.json({ attemptId: attempt.id, assignmentId }, { status: 202 });
 }
 
 function isFile(v: FormDataEntryValue): v is File {

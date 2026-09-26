@@ -135,6 +135,37 @@ function ExampleChips({ items }: { items: string[] }) {
   );
 }
 
+interface AttemptOutcome {
+  status: "complete" | "failed";
+  code?: string;
+  error?: string;
+  mismatch?: unknown;
+}
+
+/** Polls the server until the attempt finishes. Keeps going while the tab is open. */
+async function waitForAttempt(attemptId: string): Promise<AttemptOutcome> {
+  let misses = 0;
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 2500));
+    try {
+      const res = await fetch(`/api/grade/status?attemptId=${attemptId}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      misses = 0;
+      if (data.status === "complete") return { status: "complete" };
+      if (data.status === "failed") return { status: "failed", ...data };
+    } catch {
+      // A dropped connection isn't a failed grade. Give up only after many misses.
+      if (++misses >= 12) {
+        return {
+          status: "failed",
+          error: "We lost connection while grading. Check your Dashboard in a minute, your grade may still finish.",
+        };
+      }
+    }
+  }
+}
+
 export function GradeForm({
   regrade,
   variant = "page",
@@ -196,6 +227,7 @@ export function GradeForm({
   const [error, setError] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [mismatch, setMismatch] = useState<ContextMismatch | null>(null);
+  const [activeAttempt, setActiveAttempt] = useState<string | null>(null);
 
   const textChars = materialText.length + workText.length;
   const overTextLimit = textChars > limits.maxTextChars;
@@ -250,7 +282,22 @@ export function GradeForm({
         }
         throw new Error(data.error || "Grading failed. Please try again.");
       }
-      router.push(`/results/${data.attemptId}`);
+      // Grading continues on the server even if the student leaves this tab.
+      // Poll until it finishes; only a finished grade is charged.
+      const attemptId = data.attemptId as string;
+      setActiveAttempt(attemptId);
+      const outcome = await waitForAttempt(attemptId);
+      if (outcome.status === "complete") {
+        router.push(`/results/${attemptId}`);
+        return;
+      }
+      if (outcome.code === "context_mismatch" && outcome.mismatch) {
+        setMismatch(outcome.mismatch as ContextMismatch);
+        setBusy(false);
+        setActiveAttempt(null);
+        return;
+      }
+      throw new Error(outcome.error || "Grading failed. Please try again.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setBusy(false);
@@ -280,7 +327,7 @@ export function GradeForm({
     await runGrade();
   }
 
-  if (busy) return <GradingLoader />;
+  if (busy) return <GradingLoader subject={subject} attemptId={activeAttempt} />;
 
   const submitLabel = regrade ? "Check My Revision" : "Grade My Work";
 

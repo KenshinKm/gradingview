@@ -97,6 +97,8 @@ Be concise, plain, direct, specific, and actionable. A student should understand
 - Prefer short sentences and fragments over paragraphs.
 - When referring to a plain instructions/requirements document (no rubric, no answer key), call it "the instructions", not "the prompt" — on an AI product, "prompt" reads as an AI prompt. Still say "the rubric" / "the answer key" when those exist.
 
+Style: never use em-dashes or en-dashes in student-facing text. Use commas, periods, or colons instead.
+
 Per-field length limits:
 - "grading_basis_note": ONE short sentence, or "".
 - "sections[].feedback": 1–2 short sentences. Why this score — that's it.
@@ -139,6 +141,15 @@ Respond with ONLY a single JSON object (no markdown fences, no prose):
 
 "written_response_feedback", "strengths", "grammar_or_citation_issues" and "needs_check" may be empty arrays.`;
 
+const CALC_CHECKS_RULES = `
+CALCULATION CHECKS (extra output field "calc_checks")
+- Add a top-level "calc_checks" array to the JSON. The server will recompute each entry with real arithmetic and flag any disagreement, so write each one carefully.
+- Include up to 10 of the most important numeric calculations (final numeric answers, key intermediate values). Skip anything that is not plain arithmetic.
+- Each entry: { "location": string (for example "Question 5"), "what": string (a few words), "expression": string, "claimed_correct": number, "student_answer": number or null }
+- "expression" computes the CORRECT answer from the problem's given values, written with numbers only: + - * / ^ ( ) and sqrt, abs, ln, log10, exp, sin, cos, tan, pi. No variables, no units, no implicit multiplication (write 2*(3+4), not 2(3+4)). Use degrees-to-radians conversion inside the expression when needed.
+- "claimed_correct" is the value you believe that expression gives, at full precision. "student_answer" is the student's own final numeric answer for that item, or null if not numeric or not readable.
+- If calculation checking is switched off in the student message, return "calc_checks": [].`;
+
 const SUBJECT_RULES: Record<Subject, string> = {
   english: `============================================================
 SUBJECT: ENGLISH / WRITING
@@ -153,14 +164,19 @@ SUBJECT: MATH
 - Give partial credit for correct setup and method when the materials allow it. If an early mistake carries forward, give follow-through credit for later steps that are correct given that mistake, and say so.
 - If point values are printed on the paper or in the materials, use them. If not, assume equal points per question, say so in "grading_basis_note", and set "scoring_basis" to "ai_inferred".
 - Read handwriting carefully. If a digit, sign, or symbol is genuinely ambiguous, put it in "needs_check" instead of deducting.
-- Use the location field for question numbers and steps (for example "Question 5, step 2").`,
+- Use the location field for question numbers and steps (for example "Question 5, step 2").
+- Grade step by step. Make one section per problem (group them if there are more than 12). In each section's feedback name the FIRST step where the student went wrong, or say the method is right, and say how much credit the earlier correct steps earned.
+- Word "things_to_fix" by the exact question and step, for example "Question 8, completing the square: added 9 to one side only".
+${CALC_CHECKS_RULES}`,
   science: `============================================================
 SUBJECT: SCIENCE
 ============================================================
 - Judge according to the grading materials: hypothesis or purpose, procedure, data and graphs, calculations and units, analysis, conclusion, and scientific writing.
 - Re-check calculations yourself. Check units and significant figures when the materials ask for it.
 - Conclusions must be supported by the student's own data. Call out claims the data does not support.
-- Judge scientific facts at the student's level (high school or college). A simplified model is acceptable at high school level when taught that way. If you are not sure a fact is right, put it in "needs_check" instead of deducting.`,
+- Judge scientific facts at the student's level (high school or college). A simplified model is acceptable at high school level when taught that way. If you are not sure a fact is right, put it in "needs_check" instead of deducting.
+- In each section's feedback, say which part of the report or problem the points came from (data table, graph, calculation, conclusion).
+${CALC_CHECKS_RULES}`,
 };
 
 /** Full system prompt: the shared rules plus the rules for the selected subject. */

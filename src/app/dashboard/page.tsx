@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { gradeColor } from "@/components/grade-hero";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
+import { STALE_PROCESSING_MS } from "@/lib/grading/timing";
 import { getEntitlement } from "@/lib/entitlements";
 import { PLANS } from "@/lib/plans";
 import { ManageBillingButton } from "@/components/manage-billing-button";
@@ -57,6 +58,17 @@ export default async function DashboardPage() {
     )
     .sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime());
 
+  // Grades still being made in the background (started but not finished yet).
+  const inProgress = (assignments ?? []).flatMap((a) =>
+    a.grading_attempts
+      .filter(
+        (at) =>
+          at.status === "processing" &&
+          Date.now() - new Date(at.created_at).getTime() < STALE_PROCESSING_MS,
+      )
+      .map((at) => ({ attemptId: at.id, title: a.title })),
+  );
+
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader plan={entitlement.plan} remaining={remaining} />
@@ -89,6 +101,24 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
+
+        {inProgress.length > 0 && (
+          <div className="mt-6 space-y-2">
+            {inProgress.map((p) => (
+              <Link
+                key={p.attemptId}
+                href={`/results/${p.attemptId}`}
+                className="card flex items-center gap-3 p-4 hover:border-line-strong"
+              >
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-brand-600" />
+                <span className="text-sm text-ink-soft">
+                  Still grading <span className="font-semibold text-ink">{p.title}</span>
+                </span>
+                <span className="ml-auto text-xs text-ink-muted">You&apos;re only charged if it finishes</span>
+              </Link>
+            ))}
+          </div>
+        )}
 
         <h2 className="mt-8 text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
           Recent grades

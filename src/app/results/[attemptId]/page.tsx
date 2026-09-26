@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
+import { AutoRefresh } from "@/components/auto-refresh";
 import { GradeHero } from "@/components/grade-hero";
 import { ScoringBasisBadge } from "@/components/scoring-basis-badge";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
@@ -10,6 +11,7 @@ import { totalPointsEarned, totalPointsPossible, round } from "@/lib/grading/gra
 import { gradeColors } from "@/lib/grade-colors";
 import type { GradingAttempt, Assignment } from "@/lib/types";
 import { SUBJECT_CONFIG, REPORT_EMAIL } from "@/lib/subject-config";
+import { STALE_PROCESSING_MS } from "@/lib/grading/timing";
 import { parseSubject } from "@/lib/grading/subjects";
 
 export const metadata = { title: "Your estimated grade" };
@@ -69,11 +71,32 @@ export default async function ResultsPage({
   }
 
   if (attempt.status !== "complete" || !attempt.result) {
+    // Grading runs in the background. A job stuck this long has died and was never charged.
+    const stuck = Date.now() - new Date(attempt.created_at).getTime() > STALE_PROCESSING_MS;
+    if (stuck) {
+      return (
+        <Shell userId={user.id}>
+          <div className="card text-center">
+            <h1 className="text-xl font-semibold text-ink">Grading didn&apos;t finish</h1>
+            <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
+              This grade took too long and didn&apos;t finish. Your credit was not used.
+            </p>
+            <Link href={`/grade?assignment=${assignment.id}`} className="btn-primary mt-4">
+              Try again
+            </Link>
+          </div>
+        </Shell>
+      );
+    }
     return (
       <Shell userId={user.id}>
-        <div className="card text-center">
-          <h1 className="text-xl font-semibold text-ink">Still grading…</h1>
-          <p className="mt-2 text-sm text-ink-muted">Refresh in a few seconds.</p>
+        <AutoRefresh />
+        <div className="card flex flex-col items-center gap-3 py-14 text-center">
+          <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-line border-t-brand-600" />
+          <h1 className="text-lg font-semibold text-ink">Still working on your grade</h1>
+          <p className="max-w-sm text-sm text-ink-muted">
+            This page updates on its own. You&apos;re only charged if the grade finishes.
+          </p>
         </div>
       </Shell>
     );
@@ -276,6 +299,68 @@ export default async function ResultsPage({
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* CALCULATIONS WE RE-CHECKED (Math and Science) */}
+      {r.calc_review && r.calc_review.length > 0 && (
+        <section className="mt-7">
+          <SectionLabel>Calculations we re-checked</SectionLabel>
+          <div className="card divide-y divide-line p-0">
+            {r.calc_review.map((c, i) => {
+              const studentRight =
+                c.student !== null && c.computed !== null
+                  ? Math.abs(c.student - c.computed) <= 0.005 * Math.max(1, Math.abs(c.computed))
+                  : null;
+              return (
+                <div key={i} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 p-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-ink">
+                      {c.location}
+                      {c.what && <span className="ml-2 text-xs font-normal text-ink-muted">{c.what}</span>}
+                    </p>
+                    <p className="mt-0.5 text-xs text-ink-muted">
+                      {c.computed !== null ? (
+                        <>
+                          Correct answer <span className="font-medium text-ink-soft">{Number(c.computed.toPrecision(6))}</span>
+                          {c.student !== null && (
+                            <>
+                              {" · "}Your answer{" "}
+                              <span className="font-medium text-ink-soft">{Number(c.student.toPrecision(6))}</span>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        "We couldn't re-run this one"
+                      )}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                      c.status === "mismatch"
+                        ? "bg-amber-500/15 text-amber-200"
+                        : c.status === "unverified"
+                          ? "border border-line text-ink-muted"
+                          : studentRight === false
+                            ? "bg-rose-500/15 text-rose-300"
+                            : "bg-grade-a/15 text-grade-a"
+                    }`}
+                  >
+                    {c.status === "mismatch"
+                      ? "Check this"
+                      : c.status === "unverified"
+                        ? "Not verified"
+                        : studentRight === false
+                          ? "Answer differs"
+                          : "Verified"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-xs text-ink-muted">
+            We recomputed these with real arithmetic instead of trusting the AI.
+          </p>
         </section>
       )}
 
