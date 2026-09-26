@@ -9,6 +9,8 @@ import { DISCLAIMER } from "@/lib/grading/schema";
 import { totalPointsEarned, totalPointsPossible, round } from "@/lib/grading/grade-math";
 import { gradeColors } from "@/lib/grade-colors";
 import type { GradingAttempt, Assignment } from "@/lib/types";
+import { SUBJECT_CONFIG, REPORT_EMAIL } from "@/lib/subject-config";
+import { parseSubject } from "@/lib/grading/subjects";
 
 export const metadata = { title: "Your estimated grade" };
 export const dynamic = "force-dynamic";
@@ -19,6 +21,12 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       {children}
     </h2>
   );
+}
+
+function reportHref(attemptId: string, subject: string, about: string) {
+  const subj = `${subject} beta: this looks wrong`;
+  const body = `Attempt: ${attemptId}\nAbout: ${about}\n\nWhat looks wrong:\n`;
+  return `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
 }
 
 export default async function ResultsPage({
@@ -80,13 +88,23 @@ export default async function ResultsPage({
   const strengths = (r.strengths ?? []).slice(0, 3);
   const pointsPossible = totalPointsPossible(r.sections);
   const pointsEarned = totalPointsEarned(r.sections);
+  const subjectCfg = SUBJECT_CONFIG[parseSubject(r.understood?.subject_code)];
+  const beta = subjectCfg.beta;
 
   return (
     <Shell userId={user.id}>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-ink">
+          <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-ink">
             {assignment.title}
+            {beta && (
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                style={{ color: subjectCfg.color, backgroundColor: `${subjectCfg.color}1f` }}
+              >
+                {subjectCfg.name} beta
+              </span>
+            )}
           </h1>
           <p className="text-sm text-ink-muted">
             {assignment.course ? `${assignment.course} · ` : ""}
@@ -162,6 +180,20 @@ export default async function ResultsPage({
         </div>
       </div>
 
+      {beta && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface-subtle px-4 py-3 text-xs text-ink-muted">
+          <span>
+            {subjectCfg.name} grading is in beta. Double-check anything that looks off.
+          </span>
+          <a
+            className="font-medium text-ink-soft underline-offset-2 hover:underline"
+            href={reportHref(attemptId, subjectCfg.name, "overall grade")}
+          >
+            Report a problem
+          </a>
+        </div>
+      )}
+
       {/* TOP THINGS TO FIX */}
       <section className="mt-7">
         <SectionLabel>Top things to fix</SectionLabel>
@@ -183,6 +215,14 @@ export default async function ResultsPage({
                   <span className="font-semibold text-brand-400">Fix: </span>
                   {t.suggestion}
                 </p>
+                {beta && (
+                  <a
+                    className="mt-2 inline-block text-xs text-ink-muted underline-offset-2 hover:text-ink-soft hover:underline"
+                    href={reportHref(attemptId, subjectCfg.name, `fix: ${t.title} (${t.location})`)}
+                  >
+                    This looks wrong
+                  </a>
+                )}
               </div>
             </li>
           ))}
@@ -224,6 +264,14 @@ export default async function ResultsPage({
                   <p className="mt-2 text-xs leading-relaxed text-ink-muted">
                     {c.feedback}
                   </p>
+                  {beta && (
+                    <a
+                      className="mt-1.5 inline-block text-xs text-ink-muted underline-offset-2 hover:text-ink-soft hover:underline"
+                      href={reportHref(attemptId, subjectCfg.name, `section: ${c.name}`)}
+                    >
+                      This looks wrong
+                    </a>
+                  )}
                 </div>
               );
             })}

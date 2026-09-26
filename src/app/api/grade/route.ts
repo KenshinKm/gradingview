@@ -12,6 +12,8 @@ import { rateLimit } from "@/lib/rate-limit";
 import { processUpload, loadPriorMaterialImages } from "@/lib/uploads";
 import { limitsFor, textLimitError } from "@/lib/upload-limits";
 import { parseLevel, parseSubject } from "@/lib/grading/subjects";
+import { parseOptions } from "@/lib/grading/options";
+import { SUBJECT_CONFIG, isSubjectEnabled } from "@/lib/subject-config";
 import { gradeSubmission } from "@/lib/grading/service";
 import { ContextMismatchError, UnreadableImageError } from "@/lib/grading/normalize";
 import type { ImagePart } from "@/lib/grading/llm";
@@ -103,6 +105,11 @@ export async function POST(req: NextRequest) {
   const level = parseLevel(form.get("level"));
   const contextConfirmed = form.get("confirm_context") === "1";
   const limits = limitsFor(subject);
+  const options = parseOptions(form, subject);
+
+  if (!isSubjectEnabled(subject)) {
+    return NextResponse.json({ error: "That subject isn't available yet.", code: "subject_disabled" }, { status: 400 });
+  }
 
   // FormData preserves append order -> user-defined page order.
   const materialFiles = form.getAll("material_files").filter(isFile);
@@ -131,7 +138,8 @@ export async function POST(req: NextRequest) {
     pastedMaterials.length > 0 || materialFiles.length > 0 || !!existingAssignmentId;
   const hasWorkSource = pastedWork.length > 0 || workFiles.length > 0;
 
-  if (!hasMaterialSource) {
+  // Math papers carry their own questions, so grading materials are optional there.
+  if (!hasMaterialSource && !SUBJECT_CONFIG[subject].materials.optional) {
     return NextResponse.json(
       { error: "Add your grading materials (upload or paste).", code: "missing_materials" },
       { status: 400 },
@@ -243,7 +251,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: totalTextError, code: "text_too_long" }, { status: 400 });
   }
 
-  if (!gradingMaterialsText && materialImages.length === 0) {
+  if (!gradingMaterialsText && materialImages.length === 0 && !SUBJECT_CONFIG[subject].materials.optional) {
     return NextResponse.json(
       { error: "We couldn't read any grading materials from what you provided.", code: "missing_materials" },
       { status: 422 },
@@ -304,6 +312,7 @@ export async function POST(req: NextRequest) {
       subject,
       level,
       contextConfirmed,
+      options,
     });
 
     await admin

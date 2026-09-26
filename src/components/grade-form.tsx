@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { track } from "@/lib/analytics";
@@ -10,6 +10,7 @@ import { GradingLoader } from "./grading-loader";
 import { limitsFor } from "@/lib/upload-limits";
 import type { ContextMismatch } from "@/lib/grading/normalize";
 import type { Level, Subject } from "@/lib/grading/subjects";
+import { SUBJECT_CONFIG, type OptionKey } from "@/lib/subject-config";
 
 // The auth modal (and its Supabase client) only loads if an unauthenticated
 // visitor actually tries to grade — keeps it out of the initial bundle.
@@ -19,13 +20,19 @@ const AuthModal = dynamic(
 );
 
 const ACCEPT = ".pdf,.docx,.txt,.jpg,.jpeg,.png,.heic";
-const HINT = "PDF · DOCX · TXT · JPG · PNG · HEIC — multiple files & photos";
+const LEVEL_KEY = "gv_level";
+const OPTION_FIELD: Record<OptionKey, string> = {
+  partialCredit: "opt_partial_credit",
+  calculatorAllowed: "opt_calculator",
+  checkUnits: "opt_units",
+  checkCalculations: "opt_calculations",
+};
 
 interface RegradeProps {
   assignment: Assignment;
 }
 
-function PhotoTip() {
+function PhotoTip({ text }: { text: string }) {
   return (
     <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-muted">
       <svg
@@ -43,10 +50,7 @@ function PhotoTip() {
         />
         <circle cx="12" cy="12.5" r="3" stroke="currentColor" strokeWidth="1.6" />
       </svg>
-      <span>
-        Taking a photo? Make sure the whole page is visible, in focus, and
-        well-lit for the most accurate grade.
-      </span>
+      <span>{text}</span>
     </p>
   );
 }
@@ -62,6 +66,59 @@ const WORK_TYPES = [
   ["short_answer", "Short answer"],
   ["long_answer", "Long answer"],
 ] as const;
+
+function Pill({ kind }: { kind: "optional" | "required" }) {
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+        kind === "required"
+          ? "bg-brand-100 text-brand-700"
+          : "border border-line text-ink-muted"
+      }`}
+    >
+      {kind === "required" ? "Required" : "Optional"}
+    </span>
+  );
+}
+
+function Toggle({
+  label,
+  on,
+  onChange,
+}: {
+  label: string;
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className="flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-surface-raised px-3.5 py-2.5 text-left text-sm text-ink-soft hover:border-line-strong"
+    >
+      <span>{label}</span>
+      <span
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+          on ? "bg-brand-600" : "bg-line-strong"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
+            on ? "left-[18px]" : "left-0.5"
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
+
+const PLACEHOLDERS: Record<Subject, { title: string; course: string; topic: string }> = {
+  english: { title: "Research Paper", course: "AP English Literature", topic: "" },
+  math: { title: "Unit 4 Test", course: "Algebra 2", topic: "Quadratics" },
+  science: { title: "Enzyme Lab Report", course: "AP Biology", topic: "Enzyme activity" },
+};
 
 function ExampleChips({ items }: { items: string[] }) {
   return (
@@ -82,7 +139,7 @@ export function GradeForm({
   regrade,
   variant = "page",
   subject = "english",
-  level = "unspecified",
+  level: initialLevel = "unspecified",
 }: {
   regrade?: RegradeProps;
   variant?: "page" | "landing";
@@ -91,6 +148,8 @@ export function GradeForm({
 }) {
   const router = useRouter();
   const limits = limitsFor(subject);
+  const cfg = SUBJECT_CONFIG[subject];
+  const materialsOptional = cfg.materials.optional;
 
   const [materialFiles, setMaterialFiles] = useState<File[]>([]);
   const [materialText, setMaterialText] = useState("");
@@ -106,6 +165,33 @@ export function GradeForm({
     regrade?.assignment.citation_style ?? "not_specified",
   );
 
+  const [level, setLevel] = useState<Level>(initialLevel);
+  const [topic, setTopic] = useState("");
+  const [totalPoints, setTotalPoints] = useState("");
+  const [toggles, setToggles] = useState<Partial<Record<OptionKey, boolean>>>({
+    partialCredit: true,
+    calculatorAllowed: true,
+    checkUnits: true,
+    checkCalculations: true,
+  });
+
+  // Remember the student's level between visits (a convenience, never required).
+  useEffect(() => {
+    if (initialLevel !== "unspecified") return;
+    try {
+      const saved = localStorage.getItem(LEVEL_KEY);
+      if (saved === "high_school" || saved === "college") setLevel(saved);
+    } catch {}
+  }, [initialLevel]);
+
+  function chooseLevel(v: Level) {
+    setLevel(v);
+    try {
+      if (v === "unspecified") localStorage.removeItem(LEVEL_KEY);
+      else localStorage.setItem(LEVEL_KEY, v);
+    } catch {}
+  }
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -117,7 +203,7 @@ export function GradeForm({
   const hasMaterials =
     !!regrade || materialFiles.length > 0 || materialText.trim().length > 0;
   const hasWork = workFiles.length > 0 || workText.trim().length > 0;
-  const ready = hasMaterials && hasWork && !overTextLimit;
+  const ready = (hasMaterials || materialsOptional) && hasWork && !overTextLimit;
 
   async function runGrade(confirmContext = false) {
     setBusy(true);
@@ -135,6 +221,9 @@ export function GradeForm({
     fd.set("citation_style", citation);
     fd.set("subject", subject);
     fd.set("level", level);
+    if (cfg.fields.topic && topic.trim()) fd.set("topic", topic.trim());
+    if (cfg.fields.totalPoints && totalPoints.trim()) fd.set("total_points", totalPoints.trim());
+    for (const t of cfg.toggles) fd.set(OPTION_FIELD[t.key], toggles[t.key] ? "1" : "0");
     if (confirmContext) fd.set("confirm_context", "1");
     if (regrade) fd.set("assignment_id", regrade.assignment.id);
     materialFiles.forEach((f) => fd.append("material_files", f));
@@ -198,6 +287,28 @@ export function GradeForm({
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-5">
+        {/* LEVEL */}
+        <section className="card flex items-center justify-between gap-4 py-4">
+          <div>
+            <label className="text-sm font-semibold text-ink" htmlFor="level">
+              Level
+            </label>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              Sets how strict the grading is and what we expect.
+            </p>
+          </div>
+          <select
+            id="level"
+            className="input w-auto min-w-[10.5rem]"
+            value={level}
+            onChange={(e) => chooseLevel(e.target.value as Level)}
+          >
+            <option value="unspecified">Choose your level</option>
+            <option value="high_school">High school</option>
+            <option value="college">College</option>
+          </select>
+        </section>
+
         {/* SECTION 1 — GRADING MATERIALS */}
         <section className="card">
           <div className="flex items-baseline gap-2">
@@ -205,19 +316,15 @@ export function GradeForm({
               1
             </span>
             <h2 className="text-base font-semibold text-ink">Grading Materials</h2>
+            {materialsOptional && <Pill kind="optional" />}
           </div>
-          <p className="mt-1.5 text-sm text-ink-muted">
-            Upload anything that explains how your work should be graded.
-          </p>
-          <ExampleChips
-            items={[
-              "rubric",
-              "answer key",
-              "assignment requirements",
-              "grading instructions",
-              "point breakdown",
-            ]}
-          />
+          <p className="mt-1.5 text-sm text-ink-muted">{cfg.materials.desc}</p>
+          <ExampleChips items={cfg.materials.chips} />
+          {materialsOptional && cfg.materials.optionalNote && (
+            <p className="mt-3 rounded-lg border border-line bg-surface-subtle px-3 py-2 text-xs leading-relaxed text-ink-muted">
+              {cfg.materials.optionalNote}
+            </p>
+          )}
 
           {regrade && (
             <p className="mt-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-700">
@@ -231,18 +338,22 @@ export function GradeForm({
               files={materialFiles}
               onChange={setMaterialFiles}
               accept={ACCEPT}
-              hint={HINT}
+              hint={cfg.hint}
               idPrefix="mat"
               maxFiles={limits.maxMaterialFiles}
             />
-            <PhotoTip />
+            <PhotoTip text={cfg.materials.tip} />
             <details className="group mt-3">
               <summary className="cursor-pointer text-sm font-medium text-brand-600 hover:text-brand-500">
                 Paste text instead
               </summary>
               <textarea
                 className="textarea mt-2"
-                placeholder="Paste your rubric, prompt, grading criteria, point values, answer key…"
+                placeholder={
+                  materialsOptional
+                    ? "Paste point values, partial credit rules, or teacher instructions…"
+                    : "Paste your rubric, instructions, grading criteria, point values…"
+                }
                 value={materialText}
                 onChange={(e) => setMaterialText(e.target.value)}
               />
@@ -257,30 +368,27 @@ export function GradeForm({
               2
             </span>
             <h2 className="text-base font-semibold text-ink">Your Work</h2>
+            {materialsOptional && <Pill kind="required" />}
           </div>
-          <p className="mt-1.5 text-sm text-ink-muted">
-            Upload your completed work, assignment, test, essay, or written
-            responses. Multiple files and photos are fine — keep the pages in
-            order.
-          </p>
+          <p className="mt-1.5 text-sm text-ink-muted">{cfg.work.desc}</p>
 
           <div className="mt-4">
             <FileUploader
               files={workFiles}
               onChange={setWorkFiles}
               accept={ACCEPT}
-              hint={HINT}
+              hint={cfg.hint}
               idPrefix="work"
               maxFiles={limits.maxWorkFiles}
             />
-            <PhotoTip />
+            <PhotoTip text={cfg.work.tip} />
             <details className="group mt-3">
               <summary className="cursor-pointer text-sm font-medium text-brand-600 hover:text-brand-500">
                 Paste text instead
               </summary>
               <textarea
                 className="textarea mt-2 min-h-[200px]"
-                placeholder="Paste your essay, answers, or written responses here…"
+                placeholder={cfg.work.placeholder}
                 value={workText}
                 onChange={(e) => setWorkText(e.target.value)}
               />
@@ -306,7 +414,7 @@ export function GradeForm({
                 className="input"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Research Paper"
+                placeholder={PLACEHOLDERS[subject].title}
                 disabled={!!regrade}
               />
             </div>
@@ -319,7 +427,7 @@ export function GradeForm({
                 className="input"
                 value={course ?? ""}
                 onChange={(e) => setCourse(e.target.value)}
-                placeholder="AP English Literature"
+                placeholder={PLACEHOLDERS[subject].course}
                 disabled={!!regrade}
               />
             </div>
@@ -341,6 +449,37 @@ export function GradeForm({
                 ))}
               </select>
             </div>
+            {cfg.fields.topic && (
+              <div>
+                <label className="label" htmlFor="topic">
+                  Topic
+                </label>
+                <input
+                  id="topic"
+                  className="input"
+                  value={topic}
+                  maxLength={100}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder={PLACEHOLDERS[subject].topic}
+                />
+              </div>
+            )}
+            {cfg.fields.totalPoints && (
+              <div>
+                <label className="label" htmlFor="totalPoints">
+                  Total points
+                </label>
+                <input
+                  id="totalPoints"
+                  className="input"
+                  inputMode="decimal"
+                  value={totalPoints}
+                  onChange={(e) => setTotalPoints(e.target.value.replace(/[^\d.]/g, ""))}
+                  placeholder="100"
+                />
+              </div>
+            )}
+            {cfg.fields.citation && (
             <div>
               <label className="label" htmlFor="citation">
                 Citation style
@@ -359,7 +498,20 @@ export function GradeForm({
                 <option value="other">Other</option>
               </select>
             </div>
+            )}
           </div>
+          {cfg.toggles.length > 0 && (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {cfg.toggles.map((t) => (
+                <Toggle
+                  key={t.key}
+                  label={t.label}
+                  on={!!toggles[t.key]}
+                  onChange={(v) => setToggles((prev) => ({ ...prev, [t.key]: v }))}
+                />
+              ))}
+            </div>
+          )}
         </details>
 
         {overTextLimit && (
@@ -411,8 +563,8 @@ export function GradeForm({
           </button>
           <p className="mt-2 text-center text-xs text-ink-muted">
             {!ready
-              ? `Add ${hasMaterials ? "" : "grading materials"}${
-                  !hasMaterials && !hasWork ? " and " : ""
+              ? `Add ${!hasMaterials && !materialsOptional ? "grading materials" : ""}${
+                  !hasMaterials && !materialsOptional && !hasWork ? " and " : ""
                 }${hasWork ? "" : "your work"} to continue.`
               : "Your first 3 grades are free. No card required."}
           </p>

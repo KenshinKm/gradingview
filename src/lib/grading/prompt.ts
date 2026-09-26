@@ -1,5 +1,6 @@
 import { DISCLAIMER } from "./schema";
 import { LEVEL_LABEL, SUBJECT_LABEL, type Level, type Subject } from "./subjects";
+import { optionsPromptLines, type GradeOptions } from "./options";
 
 export interface GradingInput {
   gradingMaterialsText: string;
@@ -17,6 +18,8 @@ export interface GradingInput {
   level?: Level;
   /** True when the student confirmed the materials and work belong together. */
   contextConfirmed?: boolean;
+  /** Optional settings such as partial credit, units checking, topic, total points. */
+  options?: GradeOptions;
 }
 
 const CONTEXT_CHECK_BLOCK = `============================================================
@@ -190,6 +193,7 @@ export function buildUserPrompt(input: GradingInput): string {
     meta.push(
       "The student confirmed that these grading materials and this work belong together. Do NOT return context_mismatch. Grade as best you can and state your assumptions in grading_basis_note.",
     );
+  meta.push(...optionsPromptLines(input.options));
   if (input.assignmentTitle) meta.push(`Assignment title: ${input.assignmentTitle}`);
   if (input.course) meta.push(`Course / subject: ${input.course}`);
   if (input.citationStyle && input.citationStyle !== "not_specified")
@@ -197,6 +201,10 @@ export function buildUserPrompt(input: GradingInput): string {
 
   const materialImages = input.materialImageCount ?? 0;
   const workImages = input.workImageCount ?? 0;
+  if (!input.gradingMaterialsText?.trim() && materialImages === 0)
+    meta.push(
+      "No grading materials were provided. The questions are on the student's paper. Use any point values printed there, otherwise assume equal points per question, and say so in grading_basis_note.",
+    );
   const imageNotes: string[] = [];
   if (materialImages > 0)
     imageNotes.push(
