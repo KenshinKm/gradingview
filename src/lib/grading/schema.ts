@@ -55,6 +55,32 @@ export const writtenResponseFeedbackSchema = z.object({
   how_to_improve: z.string().min(1),
 });
 
+/** What the grader understood the assignment to be, shown to the student to confirm. */
+export const understoodSchema = z.object({
+  subject: z.string(),
+  level: z.string(),
+  topic: z.string(),
+  assignment: z.string(),
+  graded_on: z.string(),
+  subject_code: z.string().optional(),
+  level_code: z.string().optional(),
+});
+
+/** Parts the grader was unsure about. They are NOT deducted; the student should double-check them. */
+export const needsCheckSchema = z.object({
+  location: z.string().min(1),
+  reason: z.string().min(1),
+});
+
+/** AI usage for this grade (all calls, including retries). Cost is an estimate. */
+export const usageSchema = z.object({
+  input_tokens: z.number(),
+  output_tokens: z.number(),
+  calls: z.number(),
+  model: z.string(),
+  cost_usd: z.number().nullable(),
+});
+
 export const gradeResultSchema = z.object({
   score: z.number().min(0).max(100),
   letter_grade: z.string().min(1).max(3),
@@ -79,8 +105,14 @@ export const gradeResultSchema = z.object({
   grammar_or_citation_issues: z.array(grammarIssueSchema),
   overall_feedback: z.string().min(1),
   disclaimer: z.string().min(1),
+  understood: understoodSchema.optional(),
+  needs_check: z.array(needsCheckSchema).optional(),
+  usage: usageSchema.optional(),
 });
 
+export type Understood = z.infer<typeof understoodSchema>;
+export type NeedsCheck = z.infer<typeof needsCheckSchema>;
+export type GradeUsage = z.infer<typeof usageSchema>;
 export type Section = z.infer<typeof sectionSchema>;
 export type ThingToFix = z.infer<typeof thingToFixSchema>;
 export type Strength = z.infer<typeof strengthSchema>;
@@ -168,5 +200,22 @@ export const rawModelOutputSchema = z
       .default([]),
     overall_feedback: z.string().optional().default(""),
     disclaimer: z.string().optional(),
+    understood: z
+      .object({
+        subject: z.string().optional().default(""),
+        level: z.string().optional().default(""),
+        topic: z.string().optional().default(""),
+        assignment: z.string().optional().default(""),
+        graded_on: z.string().optional().default(""),
+      })
+      .optional(),
+    needs_check: z
+      .array(
+        z.object({
+          location: z.string().optional().default(""),
+          reason: z.string().optional().default(""),
+        }),
+      )
+      .default([]),
   })
   .passthrough();

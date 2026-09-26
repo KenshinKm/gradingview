@@ -109,6 +109,31 @@ export default async function ResultsPage({
         </Link>
       </div>
 
+      {/* WHAT WE UNDERSTOOD */}
+      {r.understood && (
+        <div className="mb-5 rounded-2xl border border-line bg-surface px-5 py-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
+            What we understood
+          </p>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
+            {(
+              [
+                ["Subject", r.understood.subject],
+                ["Level", r.understood.level],
+                ["Topic", r.understood.topic],
+                ["Assignment", r.understood.assignment],
+                ["Graded on", r.understood.graded_on],
+              ] as const
+            ).map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-[11px] text-ink-muted">{k}</dt>
+                <dd className="mt-0.5 text-[13px] font-semibold leading-snug text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+
       {/* GRADE HERO */}
       <div className="card">
         <div className="rounded-xl bg-surface-subtle py-2">
@@ -262,6 +287,29 @@ export default async function ResultsPage({
                   <span className="text-ink-muted"> — {g.location}</span>
                 </p>
                 <p className="mt-0.5 text-xs text-ink-muted">{g.explanation}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* NEEDS YOUR CHECK */}
+      {r.needs_check && r.needs_check.length > 0 && (
+        <section className="mt-7">
+          <SectionLabel>Needs your check</SectionLabel>
+          <div className="card divide-y divide-line p-0">
+            <p className="p-3.5 text-xs text-ink-muted">
+              We weren&apos;t sure about these, so we did not deduct points for them. Take a quick look.
+            </p>
+            {r.needs_check.map((n, i) => (
+              <div key={i} className="flex gap-2.5 p-3.5">
+                <span className="mt-0.5 text-grade-c" aria-hidden>
+                  !
+                </span>
+                <p className="text-sm text-ink-soft">
+                  <span className="font-semibold text-ink">{n.location}. </span>
+                  {n.reason}
+                </p>
               </div>
             ))}
           </div>

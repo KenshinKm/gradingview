@@ -1,14 +1,18 @@
 import "server-only";
 import { callLlm, type ImagePart } from "./llm";
-import { SYSTEM_PROMPT, buildUserPrompt, type GradingInput } from "./prompt";
+import { buildSystemPrompt, buildUserPrompt, type GradingInput } from "./prompt";
 import {
   extractJson,
   normalizeResult,
   checkUnreadable,
+  checkContextMismatch,
+  ContextMismatchError,
   GradingValidationError,
   UnreadableImageError,
 } from "./normalize";
-import type { GradeResult } from "./schema";
+import type { GradeResult, GradeUsage } from "./schema";
+import { estimateCostUsd } from "@/lib/llm-cost";
+import { LEVEL_LABEL, SUBJECT_LABEL } from "./subjects";
 
 export interface GradeSubmissionArgs extends GradingInput {
   /** Grading-material images, in user-defined order. */
@@ -20,6 +24,7 @@ export interface GradeSubmissionArgs extends GradingInput {
 export interface GradeSubmissionResult {
   result: GradeResult;
   model: string;
+  usage: GradeUsage;
 }
 
 /**
@@ -40,7 +45,9 @@ export async function gradeSubmission(
   }));
   const images: ImagePart[] = [...materialImages, ...workImages];
 
-  const system = SYSTEM_PROMPT;
+  const system = buildSystemPrompt(args.subject ?? "english", {
+    contextConfirmed: args.contextConfirmed,
+  });
   const baseUser = buildUserPrompt({
     ...args,
     materialImageCount: materialImages.length,
@@ -48,6 +55,10 @@ export async function gradeSubmission(
   });
 
   let lastError: unknown;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let calls = 0;
+  let usedModel = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     const user =
       attempt === 0
@@ -60,6 +71,10 @@ export async function gradeSubmission(
       const res = await callLlm({ system, user, images });
       text = res.text;
       model = res.model;
+      calls += 1;
+      usedModel = res.model;
+      inputTokens += res.usage?.input_tokens ?? 0;
+      outputTokens += res.usage?.output_tokens ?? 0;
     } catch (err) {
       lastError = err;
       continue;
@@ -70,11 +85,33 @@ export async function gradeSubmission(
       // The model reports unreadable images instead of a grade — do not retry,
       // do not guess; surface it so the caller can ask for better photos.
       checkUnreadable(json);
+      checkContextMismatch(json);
       const result = normalizeResult(json);
-      return { result, model };
+
+      const subject = args.subject ?? "english";
+      const level = args.level ?? "unspecified";
+      // The student's own selections are authoritative in the summary.
+      if (result.understood) {
+        result.understood.subject = SUBJECT_LABEL[subject];
+        result.understood.subject_code = subject;
+        result.understood.level_code = level;
+        if (level !== "unspecified") result.understood.level = LEVEL_LABEL[level];
+      }
+      const usage: GradeUsage = {
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        calls,
+        model: usedModel,
+        cost_usd: estimateCostUsd(usedModel, {
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+        }),
+      };
+      result.usage = usage;
+      return { result, model, usage };
     } catch (err) {
       lastError = err;
-      if (err instanceof UnreadableImageError) throw err;
+      if (err instanceof UnreadableImageError || err instanceof ContextMismatchError) throw err;
       if (!(err instanceof GradingValidationError)) throw err;
     }
   }

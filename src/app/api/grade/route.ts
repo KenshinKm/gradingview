@@ -10,9 +10,10 @@ import { clientIpHash } from "@/lib/client-ip";
 import { isFreeGradeIpBlocked } from "@/lib/free-grade-ip";
 import { rateLimit } from "@/lib/rate-limit";
 import { processUpload, loadPriorMaterialImages } from "@/lib/uploads";
-import { MAX_FILES_PER_SECTION } from "@/lib/upload-limits";
+import { limitsFor, textLimitError } from "@/lib/upload-limits";
+import { parseLevel, parseSubject } from "@/lib/grading/subjects";
 import { gradeSubmission } from "@/lib/grading/service";
-import { UnreadableImageError } from "@/lib/grading/normalize";
+import { ContextMismatchError, UnreadableImageError } from "@/lib/grading/normalize";
 import type { ImagePart } from "@/lib/grading/llm";
 import { track } from "@/lib/analytics";
 
@@ -98,19 +99,32 @@ export async function POST(req: NextRequest) {
   let citationStyle = String(form.get("citation_style") || "not_specified").trim();
   if (!CITATION_STYLES.has(citationStyle)) citationStyle = "not_specified";
   const existingAssignmentId = String(form.get("assignment_id") || "").trim() || null;
+  const subject = parseSubject(form.get("subject"));
+  const level = parseLevel(form.get("level"));
+  const contextConfirmed = form.get("confirm_context") === "1";
+  const limits = limitsFor(subject);
 
   // FormData preserves append order -> user-defined page order.
   const materialFiles = form.getAll("material_files").filter(isFile);
   const workFiles = form.getAll("work_files").filter(isFile);
 
-  if (materialFiles.length > MAX_FILES_PER_SECTION || workFiles.length > MAX_FILES_PER_SECTION) {
+  if (materialFiles.length > limits.maxMaterialFiles || workFiles.length > limits.maxWorkFiles) {
     return NextResponse.json(
       {
-        error: `You can attach up to ${MAX_FILES_PER_SECTION} files per section.`,
+        error: `You can attach up to ${limits.maxMaterialFiles} grading material files and ${limits.maxWorkFiles} work files.`,
         code: "too_many_files",
       },
       { status: 400 },
     );
+  }
+
+  // Cheap early check on pasted text; extracted file text is checked below.
+  const pastedTextError = textLimitError(
+    pastedMaterials.length + pastedWork.length,
+    limits.maxTextChars,
+  );
+  if (pastedTextError) {
+    return NextResponse.json({ error: pastedTextError, code: "text_too_long" }, { status: 400 });
   }
 
   const hasMaterialSource =
@@ -221,6 +235,14 @@ export async function POST(req: NextRequest) {
 
   const workText = [pastedWork, ...workTexts].filter(Boolean).join("\n\n").trim();
 
+  const totalTextError = textLimitError(
+    gradingMaterialsText.length + workText.length,
+    limits.maxTextChars,
+  );
+  if (totalTextError) {
+    return NextResponse.json({ error: totalTextError, code: "text_too_long" }, { status: 400 });
+  }
+
   if (!gradingMaterialsText && materialImages.length === 0) {
     return NextResponse.json(
       { error: "We couldn't read any grading materials from what you provided.", code: "missing_materials" },
@@ -279,6 +301,9 @@ export async function POST(req: NextRequest) {
       citationStyle,
       materialImages,
       workImages,
+      subject,
+      level,
+      contextConfirmed,
     });
 
     await admin
@@ -304,6 +329,23 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ attemptId: attempt.id, assignmentId });
   } catch (err) {
+    // Work clearly doesn't match the materials or subject: ask, DO NOT charge.
+    if (err instanceof ContextMismatchError) {
+      await admin
+        .from("grading_attempts")
+        .update({ status: "failed", error_message: err.studentMessage.slice(0, 500) })
+        .eq("id", attempt.id);
+
+      return NextResponse.json(
+        {
+          error: err.studentMessage,
+          code: "context_mismatch",
+          mismatch: err.mismatch,
+        },
+        { status: 422 },
+      );
+    }
+
     // Unreadable photo(s): fail the attempt, name the pages, DO NOT charge.
     if (err instanceof UnreadableImageError) {
       await admin

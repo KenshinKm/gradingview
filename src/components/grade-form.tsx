@@ -7,7 +7,9 @@ import { track } from "@/lib/analytics";
 import type { Assignment } from "@/lib/types";
 import { FileUploader } from "./file-uploader";
 import { GradingLoader } from "./grading-loader";
-import { MAX_FILES_PER_SECTION } from "@/lib/upload-limits";
+import { limitsFor } from "@/lib/upload-limits";
+import type { ContextMismatch } from "@/lib/grading/normalize";
+import type { Level, Subject } from "@/lib/grading/subjects";
 
 // The auth modal (and its Supabase client) only loads if an unauthenticated
 // visitor actually tries to grade — keeps it out of the initial bundle.
@@ -79,11 +81,16 @@ function ExampleChips({ items }: { items: string[] }) {
 export function GradeForm({
   regrade,
   variant = "page",
+  subject = "english",
+  level = "unspecified",
 }: {
   regrade?: RegradeProps;
   variant?: "page" | "landing";
+  subject?: Subject;
+  level?: Level;
 }) {
   const router = useRouter();
+  const limits = limitsFor(subject);
 
   const [materialFiles, setMaterialFiles] = useState<File[]>([]);
   const [materialText, setMaterialText] = useState("");
@@ -102,15 +109,20 @@ export function GradeForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [mismatch, setMismatch] = useState<ContextMismatch | null>(null);
+
+  const textChars = materialText.length + workText.length;
+  const overTextLimit = textChars > limits.maxTextChars;
 
   const hasMaterials =
     !!regrade || materialFiles.length > 0 || materialText.trim().length > 0;
   const hasWork = workFiles.length > 0 || workText.trim().length > 0;
-  const ready = hasMaterials && hasWork;
+  const ready = hasMaterials && hasWork && !overTextLimit;
 
-  async function runGrade() {
+  async function runGrade(confirmContext = false) {
     setBusy(true);
     setError(null);
+    setMismatch(null);
     if (regrade) track("regrade_clicked");
     else track("grading_started", { source: variant });
 
@@ -121,6 +133,9 @@ export function GradeForm({
     fd.set("course", course);
     fd.set("work_type", workType);
     fd.set("citation_style", citation);
+    fd.set("subject", subject);
+    fd.set("level", level);
+    if (confirmContext) fd.set("confirm_context", "1");
     if (regrade) fd.set("assignment_id", regrade.assignment.id);
     materialFiles.forEach((f) => fd.append("material_files", f));
     workFiles.forEach((f) => fd.append("work_files", f));
@@ -137,6 +152,11 @@ export function GradeForm({
         }
         if (res.status === 402) {
           router.push(`/pricing?reason=${data.code ?? "not_entitled"}`);
+          return;
+        }
+        if (res.status === 422 && data.code === "context_mismatch" && data.mismatch) {
+          setMismatch(data.mismatch as ContextMismatch);
+          setBusy(false);
           return;
         }
         throw new Error(data.error || "Grading failed. Please try again.");
@@ -213,7 +233,7 @@ export function GradeForm({
               accept={ACCEPT}
               hint={HINT}
               idPrefix="mat"
-              maxFiles={MAX_FILES_PER_SECTION}
+              maxFiles={limits.maxMaterialFiles}
             />
             <PhotoTip />
             <details className="group mt-3">
@@ -251,7 +271,7 @@ export function GradeForm({
               accept={ACCEPT}
               hint={HINT}
               idPrefix="work"
-              maxFiles={MAX_FILES_PER_SECTION}
+              maxFiles={limits.maxWorkFiles}
             />
             <PhotoTip />
             <details className="group mt-3">
@@ -341,6 +361,39 @@ export function GradeForm({
             </div>
           </div>
         </details>
+
+        {overTextLimit && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            That&apos;s too much text ({textChars.toLocaleString()} characters). The limit is{" "}
+            {limits.maxTextChars.toLocaleString()} across everything you paste. Try trimming it down.
+          </div>
+        )}
+
+        {mismatch && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
+            <p className="font-semibold">Before we grade this, double-check your files</p>
+            <p className="mt-1.5 leading-relaxed text-amber-100/90">
+              {[mismatch.summary, mismatch.suggestion].filter(Boolean).join(" ")}
+            </p>
+            <p className="mt-1 text-xs text-amber-100/70">You were not charged.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-secondary px-4 py-2"
+                onClick={() => setMismatch(null)}
+              >
+                Let me fix my files
+              </button>
+              <button
+                type="button"
+                className="btn-ghost px-4 py-2"
+                onClick={() => void runGrade(true)}
+              >
+                Grade it anyway
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">

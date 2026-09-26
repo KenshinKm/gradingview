@@ -56,6 +56,48 @@ export class UnreadableImageError extends Error {
   }
 }
 
+export interface ContextMismatch {
+  summary: string;
+  detected: string;
+  expected: string;
+  suggestion: string;
+}
+
+/**
+ * Raised when the model reports that the student's work clearly does not belong
+ * with the grading materials or the selected subject. The attempt fails WITHOUT
+ * consuming a credit and the student is asked to confirm or fix their files.
+ */
+export class ContextMismatchError extends Error {
+  constructor(public readonly mismatch: ContextMismatch) {
+    super(mismatch.summary || "The work doesn't seem to match the grading materials.");
+    this.name = "ContextMismatchError";
+  }
+
+  get studentMessage(): string {
+    const { summary, suggestion } = this.mismatch;
+    return [summary, suggestion].filter(Boolean).join(" ") ||
+      "Your work doesn't seem to match your grading materials. Double-check that you uploaded the right files.";
+  }
+}
+
+/**
+ * If the model returned a `context_mismatch` report instead of a grade, throw
+ * a ContextMismatchError. Call on the parsed JSON before `normalizeResult`.
+ */
+export function checkContextMismatch(input: unknown): void {
+  if (!input || typeof input !== "object") return;
+  const raw = (input as Record<string, unknown>).context_mismatch;
+  if (!raw || typeof raw !== "object") return;
+  const o = raw as Record<string, unknown>;
+  throw new ContextMismatchError({
+    summary: String(o.summary ?? "").trim().slice(0, 300),
+    detected: String(o.detected ?? "").trim().slice(0, 200),
+    expected: String(o.expected ?? "").trim().slice(0, 200),
+    suggestion: String(o.suggestion ?? "").trim().slice(0, 300),
+  });
+}
+
 function cap(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -234,6 +276,25 @@ export function normalizeResult(input: unknown): GradeResult {
     overall_feedback: String(raw.overall_feedback || "").trim(),
     disclaimer: DISCLAIMER,
   };
+
+  const u = raw.understood;
+  if (u) {
+    result.understood = {
+      subject: (u.subject || "").trim() || "Not specified",
+      level: (u.level || "").trim() || "Not specified",
+      topic: (u.topic || "").trim() || "Not specified",
+      assignment: (u.assignment || "").trim() || "Not specified",
+      graded_on: (u.graded_on || "").trim() || "Not specified",
+    };
+  }
+  const nc = (raw.needs_check ?? [])
+    .map((n) => ({
+      location: String(n.location || "").trim() || "General",
+      reason: String(n.reason || "").trim(),
+    }))
+    .filter((n) => n.reason)
+    .slice(0, 4);
+  if (nc.length > 0) result.needs_check = nc;
 
   if (!result.overall_feedback) {
     throw new GradingValidationError("Model returned no overall feedback");

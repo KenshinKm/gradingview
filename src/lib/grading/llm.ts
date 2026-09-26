@@ -21,6 +21,8 @@ export interface LlmRequest {
 export interface LlmResponse {
   text: string;
   model: string;
+  /** Token usage reported by the provider, when available. */
+  usage?: { input_tokens: number; output_tokens: number };
 }
 
 /**
@@ -80,7 +82,11 @@ async function callAnthropic(req: LlmRequest, model: string): Promise<LlmRespons
     .join("\n")
     .trim();
 
-  return { text, model };
+  return {
+    text,
+    model,
+    usage: { input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens },
+  };
 }
 
 async function callOpenAi(req: LlmRequest, model: string): Promise<LlmResponse> {
@@ -111,5 +117,11 @@ async function callOpenAi(req: LlmRequest, model: string): Promise<LlmResponse> 
   });
 
   const text = (res.choices[0]?.message?.content ?? "").trim();
-  return { text, model };
+  return {
+    text,
+    model,
+    usage: res.usage
+      ? { input_tokens: res.usage.prompt_tokens, output_tokens: res.usage.completion_tokens }
+      : undefined,
+  };
 }
