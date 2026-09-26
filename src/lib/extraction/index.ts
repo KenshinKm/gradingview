@@ -1,6 +1,7 @@
 import "server-only";
 import mammoth from "mammoth";
 import { limits } from "@/lib/env";
+import { downscaleImage } from "./image";
 
 export type FileRole = "grading_material" | "work";
 
@@ -195,9 +196,10 @@ async function prepareImage(
     mediaType = "image/jpeg";
   }
 
+  const prepared = await downscaleImage(outBuffer, mediaType);
   return {
     text: "",
-    image: { mediaType, base64: outBuffer.toString("base64") },
+    image: { mediaType: prepared.mediaType, base64: prepared.buffer.toString("base64") },
     status: "extracted",
   };
 }

@@ -4,6 +4,7 @@ import { recordUsage, type Entitlement } from "@/lib/entitlements";
 import { track } from "@/lib/analytics";
 import { gradeSubmission, type GradeSubmissionArgs } from "./service";
 import { GRADE_TIMEOUT_MS } from "./timing";
+import { costThresholdsFromEnv, evaluateCost, monthStartIso, sumCosts } from "@/lib/cost-watch";
 import { ContextMismatchError, UnreadableImageError } from "./normalize";
 
 export interface GradingJobParams {
@@ -61,6 +62,8 @@ export async function runGradingJob(p: GradingJobParams): Promise<void> {
     // Charge ONLY after a successful, valid, persisted result.
     await recordUsage(p.userId, p.attemptId, p.entitlement, p.ipHash);
 
+    await watchCost(p.userId, p.attemptId, result.usage?.cost_usd);
+
     track("grading_completed", { draft: p.draftNumber, score: result.score });
     if (p.entitlement.plan === "free") track("free_grade_used");
   } catch (err) {
@@ -85,6 +88,26 @@ export async function runGradingJob(p: GradingJobParams): Promise<void> {
       { blocked: { code: "grading_failed" } },
       (err as Error).message,
     );
+  }
+}
+
+/** Logs a "[cost-alert]" line when this grade or the student's month is unusually expensive. */
+async function watchCost(userId: string, attemptId: string, gradeUsd: number | null | undefined) {
+  try {
+    const admin = createSupabaseAdminClient();
+    const { data } = await admin
+      .from("grading_attempts")
+      .select("cost:result->usage->>cost_usd")
+      .eq("user_id", userId)
+      .eq("status", "complete")
+      .gte("created_at", monthStartIso());
+    const monthUsd = sumCosts((data ?? []) as unknown as Array<{ cost: unknown }>);
+    for (const a of evaluateCost(gradeUsd, monthUsd, costThresholdsFromEnv())) {
+      console.warn(`[cost-alert] ${a.kind}: ${a.message}`, { userId, attemptId });
+    }
+  } catch (e) {
+    // Monitoring must never affect the student's grade.
+    console.error("cost watch failed", e);
   }
 }
 
