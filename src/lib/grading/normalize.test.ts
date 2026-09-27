@@ -191,3 +191,80 @@ describe("normalizeResult — inference & errors", () => {
     expect(() => normalizeResult(null)).toThrow(GradingValidationError);
   });
 });
+
+describe("normalizeResult — fully-inferred rubrics always total exactly 100", () => {
+  it("rescales a drifted total (100.1) to a clean 100 and keeps relative weight", () => {
+    const r = normalizeResult({
+      scoring_basis: "ai_inferred",
+      inferred_rubric: true,
+      sections: [
+        { name: "Hypothesis", points_earned: 6, points_possible: 20.1, scoring_basis: "ai_inferred", feedback: "OK." },
+        { name: "Data", points_earned: 24, points_possible: 30, scoring_basis: "ai_inferred", feedback: "OK." },
+        { name: "Analysis", points_earned: 20, points_possible: 25, scoring_basis: "ai_inferred", feedback: "OK." },
+        { name: "Conclusion", points_earned: 15, points_possible: 25, scoring_basis: "ai_inferred", feedback: "OK." },
+      ],
+      things_to_fix: [{ priority: 1, title: "x", explanation: "y", location: "z", suggestion: "w" }],
+      overall_feedback: "ok",
+    });
+    const total = r.sections.reduce((s, c) => s + c.points_possible, 0);
+    expect(total).toBe(100);
+    // Data was the largest section (30/100.1), so it's the one that stayed proportionally biggest.
+    const data = r.sections.find((s) => s.name === "Data")!;
+    expect(data.points_possible).toBeGreaterThan(25);
+  });
+
+  it("rescales an under-total (99) up to a clean 100 too", () => {
+    const r = normalizeResult({
+      scoring_basis: "ai_inferred",
+      sections: [
+        { name: "A", points_earned: 20, points_possible: 33, scoring_basis: "ai_inferred", feedback: "x" },
+        { name: "B", points_earned: 20, points_possible: 33, scoring_basis: "ai_inferred", feedback: "x" },
+        { name: "C", points_earned: 20, points_possible: 33, scoring_basis: "ai_inferred", feedback: "x" },
+      ],
+      things_to_fix: [{ priority: 1, title: "x", explanation: "y", location: "z", suggestion: "w" }],
+      overall_feedback: "ok",
+    });
+    expect(r.sections.reduce((s, c) => s + c.points_possible, 0)).toBe(100);
+  });
+
+  it("never lets a section's earned points exceed its possible points after rescaling", () => {
+    const r = normalizeResult({
+      scoring_basis: "ai_inferred",
+      sections: [
+        { name: "A", points_earned: 10, points_possible: 10, scoring_basis: "ai_inferred", feedback: "x" },
+        { name: "B", points_earned: 9.6, points_possible: 10, scoring_basis: "ai_inferred", feedback: "x" },
+      ],
+      things_to_fix: [{ priority: 1, title: "x", explanation: "y", location: "z", suggestion: "w" }],
+      overall_feedback: "ok",
+    });
+    for (const s of r.sections) expect(s.points_earned).toBeLessThanOrEqual(s.points_possible);
+  });
+
+  it("does NOT rescale a real rubric with its own non-100 total", () => {
+    const r = normalizeResult({
+      scoring_basis: "rubric",
+      sections: [
+        { name: "Correctness", points_earned: 18, points_possible: 20, scoring_basis: "rubric", feedback: "x" },
+        { name: "Work shown", points_earned: 8, points_possible: 10, scoring_basis: "rubric", feedback: "x" },
+        { name: "Notation", points_earned: 9, points_possible: 10, scoring_basis: "rubric", feedback: "x" },
+      ],
+      things_to_fix: [{ priority: 1, title: "x", explanation: "y", location: "z", suggestion: "w" }],
+      overall_feedback: "ok",
+    });
+    expect(r.sections.reduce((s, c) => s + c.points_possible, 0)).toBe(40);
+    expect(r.score).toBe(88);
+  });
+
+  it("does NOT rescale a mixed-basis submission (part real rubric, part inferred)", () => {
+    const r = normalizeResult({
+      scoring_basis: "mixed",
+      sections: [
+        { name: "Multiple Choice", points_earned: 27, points_possible: 30, scoring_basis: "answer_key", feedback: "x" },
+        { name: "Essay", points_earned: 39, points_possible: 45, scoring_basis: "ai_inferred", feedback: "x" },
+      ],
+      things_to_fix: [{ priority: 1, title: "x", explanation: "y", location: "z", suggestion: "w" }],
+      overall_feedback: "ok",
+    });
+    expect(r.sections.reduce((s, c) => s + c.points_possible, 0)).toBe(75);
+  });
+});

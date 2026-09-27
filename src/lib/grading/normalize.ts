@@ -14,6 +14,48 @@ import {
   round,
 } from "./grade-math";
 
+type ScoredSection = {
+  name: string;
+  kind?: string;
+  points_earned: number;
+  points_possible: number;
+  scoring_basis: ScoringBasis;
+  feedback: string;
+};
+
+/**
+ * When there is no real rubric or answer key, the model invents its own point
+ * system and is told to total 100, but sometimes drifts to 99 or 100.1
+ * anyway. Force it to add up exactly: round each section's points to a whole
+ * number (keeping relative weight and each section's earned/possible ratio),
+ * then put any rounding drift on the largest section so the total is always
+ * a clean 100. Deterministic, so it can't fail the way asking the model
+ * nicely did.
+ */
+function forceCleanTotal(sections: ScoredSection[], target = 100): ScoredSection[] {
+  const currentTotal = sections.reduce((s, c) => s + c.points_possible, 0);
+  if (sections.length === 0 || currentTotal <= 0) return sections;
+  const scale = target / currentTotal;
+
+  const scaled = sections.map((s) => {
+    const ratio = s.points_possible > 0 ? s.points_earned / s.points_possible : 0;
+    const possible = Math.max(0, Math.round(s.points_possible * scale));
+    return { ...s, points_possible: possible, points_earned: round(possible * ratio, 1) };
+  });
+
+  const drift = target - scaled.reduce((s, c) => s + c.points_possible, 0);
+  if (drift !== 0) {
+    // Least noticeable on the section that already carries the most points.
+    let idx = 0;
+    for (let i = 1; i < scaled.length; i++) {
+      if (scaled[i].points_possible > scaled[idx].points_possible) idx = i;
+    }
+    scaled[idx] = { ...scaled[idx], points_possible: scaled[idx].points_possible + drift };
+  }
+  // Rounding must never leave earned above possible.
+  return scaled.map((s) => ({ ...s, points_earned: Math.min(s.points_earned, s.points_possible) }));
+}
+
 export class GradingValidationError extends Error {
   constructor(
     message: string,
@@ -185,6 +227,11 @@ export function normalizeResult(input: unknown): GradeResult {
     else overallBasis = "mixed";
   }
 
+  // The model invented the whole point system (no real rubric or key existed):
+  // force it to a clean 100, since the prompt asking nicely isn't reliable enough.
+  // A real rubric or key with its own total (e.g. a 40-point quiz) is left alone.
+  const finalSections = overallBasis === "ai_inferred" ? forceCleanTotal(sections) : sections;
+
   const inferred =
     typeof raw.inferred_rubric === "boolean"
       ? raw.inferred_rubric
@@ -193,7 +240,7 @@ export function normalizeResult(input: unknown): GradeResult {
         sections.some((s) => s.scoring_basis === "ai_inferred");
 
   // Percentage: prefer the section math; fall back to the model's stated score.
-  const fromSections = percentFromSections(sections);
+  const fromSections = percentFromSections(finalSections);
   let score =
     fromSections ??
     (typeof raw.score === "number" ? clampPercent(raw.score) : NaN);
@@ -259,7 +306,7 @@ export function normalizeResult(input: unknown): GradeResult {
     scoring_basis: overallBasis,
     inferred_rubric: inferred,
     grading_basis_note: String(raw.grading_basis_note || ""),
-    sections,
+    sections: finalSections,
     written_response_feedback: writtenResponseFeedback,
     things_to_fix: thingsToFix,
     strengths: (raw.strengths ?? [])
