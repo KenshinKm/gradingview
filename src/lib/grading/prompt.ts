@@ -153,8 +153,8 @@ Respond with ONLY a single JSON object (no markdown fences, no prose). Write the
 
 const CALC_CHECKS_RULES = `
 CALCULATION CHECKS (extra output field "calc_checks")
-- Add a top-level "calc_checks" array to the JSON, right after "needs_check". The server will recompute each entry with real arithmetic and flag any disagreement, so write each one carefully.
-- Include up to 6 of the most important numeric results the student reports: final numeric answers, and derived values such as rates, percent change, unit conversions, and key intermediate values. Skip anything that is not plain arithmetic.
+- Add a top-level "calc_checks" array to the JSON, right after "needs_check". The server independently recomputes every entry with real arithmetic and corrects the score if a section was given credit despite a wrong final answer, so an answer left out of this list cannot be caught. This is your most important safety net: an incomplete list means a wrong answer could wrongly get full credit.
+- Include EVERY final numeric answer the student gives, one entry per question, up to 12 total (group or pick the most important if there are genuinely more than 12 numeric answers). Also include key derived values such as rates, percent change, or unit conversions when they matter to the grade. Skip only intermediate scratch work and anything that is not plain arithmetic.
 - Each entry: { "location": string (for example "Question 5"), "what": string (a few words), "expression": string, "claimed_correct": number, "student_answer": number or null }
 - "expression" computes the CORRECT answer from the problem's given values, written with numbers only: + - * / ^ ( ) and sqrt, abs, ln, log10, exp, sin, cos, tan, pi. No variables, no units, no implicit multiplication (write 2*(3+4), not 2(3+4)). Use degrees-to-radians conversion inside the expression when needed.
 - "claimed_correct" is the value you believe that expression gives, at full precision. "student_answer" is the student's own final numeric answer for that item, or null if not numeric or not readable.

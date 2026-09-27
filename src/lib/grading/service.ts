@@ -13,7 +13,7 @@ import {
 import type { GradeResult, GradeUsage } from "./schema";
 import { estimateCostUsd } from "@/lib/llm-cost";
 import { LEVEL_LABEL, SUBJECT_LABEL } from "./subjects";
-import { reviewCalcChecks } from "./calc-check";
+import { reviewCalcChecks, applyCalcCorrections } from "./calc-check";
 import { effortFor, type Effort, type Reasoning } from "./effort";
 
 export interface GradeSubmissionArgs extends GradingInput {
@@ -107,7 +107,7 @@ export async function gradeSubmission(
       // do not guess; surface it so the caller can ask for better photos.
       checkUnreadable(json);
       checkContextMismatch(json);
-      const result = normalizeResult(json);
+      let result = normalizeResult(json);
 
       const subject = args.subject ?? "english";
       const level = args.level ?? "unspecified";
@@ -124,7 +124,14 @@ export async function gradeSubmission(
           (json as Record<string, unknown>).calc_checks,
           { enabled: args.options?.checkCalculations !== false },
         );
-        if (review.length > 0) result.calc_review = review;
+        if (review.length > 0) {
+          // Correct the score BEFORE attaching calc_review, so the summary shown
+          // to the student reflects the same numbers as the sections below it.
+          result = applyCalcCorrections(result, review, {
+            partialCreditAllowed: args.options?.partialCredit !== false,
+          });
+          result.calc_review = review;
+        }
         if (needsCheck.length > 0) {
           result.needs_check = [...(result.needs_check ?? []), ...needsCheck].slice(0, 6);
         }

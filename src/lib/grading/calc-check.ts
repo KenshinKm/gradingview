@@ -245,3 +245,90 @@ export function reviewCalcChecks(raw: unknown, opts: { enabled?: boolean } = {})
   }
   return { review, needsCheck };
 }
+
+// ---------------------------------------------------------------------------
+// Turning a confirmed wrong final answer into an actual score correction.
+// ---------------------------------------------------------------------------
+
+import type { GradeResult, Section } from "./schema";
+import { percentFromSections, letterForPercent, estimatedRange, round } from "./grade-math";
+
+/** "Question 2", "Q2", "question #2" -> "2". Null when no question number is present. */
+function questionNumber(s: string): string | null {
+  const m = /\bq(?:uestion)?\s*#?\s*(\d+)\b/i.exec(s);
+  return m ? m[1] : null;
+}
+
+/** True when a section's name plainly spans more than one question (so a single-item correction shouldn't touch it). */
+function spansMultipleQuestions(name: string): boolean {
+  return /\bquestions?\s*\d+\s*(?:[-–,]|and|through|to)\s*\d+/i.test(name) || /\d+\s*[-–]\s*\d+/.test(name);
+}
+
+/** A section given credit despite a confirmed-wrong final answer gets capped, never raised. */
+const WRONG_ANSWER_MAX_RATIO_WITH_PARTIAL_CREDIT = 0.4;
+const WRONG_ANSWER_MAX_RATIO_NO_PARTIAL_CREDIT = 0;
+/** Only step in when the model gave more credit than that cap already implies. */
+const CORRECTION_TRIGGER_RATIO = 0.6;
+
+/**
+ * The model can write an internally consistent-looking `calc_checks` entry
+ * (correctly computing the right answer) while separately grading that same
+ * question as fully correct in `sections`, a self-contradiction inside one
+ * response. This cross-checks the two and corrects the section's points
+ * when the student's own final answer is confirmed wrong (real arithmetic,
+ * not a judgment call), then recomputes the overall score from the correction.
+ *
+ * Deliberately conservative: only touches a section that (a) matches a
+ * calc_review item by question number and (b) plainly covers just that one
+ * question, never a merged "Questions 1-3" section. Never used for English.
+ */
+export function applyCalcCorrections(
+  result: GradeResult,
+  review: CalcReview[],
+  opts: { partialCreditAllowed: boolean },
+): GradeResult {
+  const wrongItems = review.filter(
+    (r) => r.computed !== null && r.student !== null && !closeEnough(r.computed, r.student),
+  );
+  if (wrongItems.length === 0) return result;
+
+  const cap = opts.partialCreditAllowed
+    ? WRONG_ANSWER_MAX_RATIO_WITH_PARTIAL_CREDIT
+    : WRONG_ANSWER_MAX_RATIO_NO_PARTIAL_CREDIT;
+
+  let corrected = false;
+  const sections: Section[] = result.sections.map((s) => {
+    if (s.points_possible <= 0 || spansMultipleQuestions(s.name)) return s;
+    const ratio = s.points_earned / s.points_possible;
+    if (ratio < CORRECTION_TRIGGER_RATIO) return s;
+
+    const sectionQ = questionNumber(s.name);
+    if (!sectionQ) return s;
+    const hit = wrongItems.find((w) => questionNumber(w.location) === sectionQ);
+    if (!hit) return s;
+    if (ratio <= cap) return s; // already at or below the corrected ceiling
+
+    corrected = true;
+    const points_earned = round(s.points_possible * cap, 1);
+    return {
+      ...s,
+      points_earned,
+      feedback: `We recomputed this and the correct answer is ${short(hit.computed!)}, not ${short(hit.student!)}. Credit was adjusted for the wrong final answer.`,
+    };
+  });
+
+  if (!corrected) return result;
+
+  const score = round(percentFromSections(sections) ?? result.score);
+  const range = estimatedRange(score, result.inferred_rubric);
+  const note = "One or more answers were rescored after independently re-checking the arithmetic.";
+  return {
+    ...result,
+    sections,
+    score,
+    letter_grade: letterForPercent(score),
+    estimated_range_low: range.low,
+    estimated_range_high: range.high,
+    grading_basis_note: result.grading_basis_note ? `${result.grading_basis_note} ${note}` : note,
+  };
+}

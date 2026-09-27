@@ -27,6 +27,26 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+function ReportLink({ href }: { href: string }) {
+  return (
+    <a
+      className="mt-2 inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[10px] font-medium text-ink-muted transition-colors hover:border-line-strong hover:bg-surface-raised hover:text-ink-soft"
+      href={href}
+    >
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
+        <path
+          d="M5 3v18M5 4h11l-2.5 4L16 12H5"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      Report if this looks wrong
+    </a>
+  );
+}
+
 function reportHref(attemptId: string, subject: string, about: string) {
   const subj = `${subject} beta: this looks wrong`;
   const body = `Attempt: ${attemptId}\nAbout: ${about}\n\nWhat looks wrong:\n`;
@@ -256,12 +276,7 @@ export default async function ResultsPage({
                   {t.suggestion}
                 </p>
                 {beta && (
-                  <a
-                    className="mt-2 inline-block text-xs text-ink-muted underline-offset-2 hover:text-ink-soft hover:underline"
-                    href={reportHref(attemptId, subjectCfg.name, `fix: ${t.title} (${t.location})`)}
-                  >
-                    This looks wrong
-                  </a>
+                  <ReportLink href={reportHref(attemptId, subjectCfg.name, `fix: ${t.title} (${t.location})`)} />
                 )}
               </div>
             </li>
@@ -305,12 +320,7 @@ export default async function ResultsPage({
                     {c.feedback}
                   </p>
                   {beta && (
-                    <a
-                      className="mt-1.5 inline-block text-xs text-ink-muted underline-offset-2 hover:text-ink-soft hover:underline"
-                      href={reportHref(attemptId, subjectCfg.name, `section: ${c.name}`)}
-                    >
-                      This looks wrong
-                    </a>
+                    <ReportLink href={reportHref(attemptId, subjectCfg.name, `section: ${c.name}`)} />
                   )}
                 </div>
               );

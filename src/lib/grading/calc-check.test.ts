@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { evaluateExpression, reviewCalcChecks, closeEnough } from "./calc-check";
+import { evaluateExpression, reviewCalcChecks, closeEnough, applyCalcCorrections } from "./calc-check";
 
 describe("evaluateExpression", () => {
   it("handles precedence, parentheses and powers", () => {
@@ -83,5 +83,105 @@ describe("reviewCalcChecks", () => {
   it("tolerates rounding in the claimed value", () => {
     expect(closeEnough(3.14159, 3.14)).toBe(true);
     expect(closeEnough(3.14, 3.3)).toBe(false);
+  });
+});
+
+describe("applyCalcCorrections", () => {
+  const section = (name: string, earned: number, possible: number) => ({
+    name,
+    points_earned: earned,
+    points_possible: possible,
+    scoring_basis: "ai_inferred" as const,
+    feedback: `${name} solved correctly.`,
+  });
+
+  const baseResult = (sections: ReturnType<typeof section>[]) => ({
+    score: 100,
+    letter_grade: "A+",
+    estimated_range_low: 100,
+    estimated_range_high: 100,
+    scoring_basis: "ai_inferred" as const,
+    inferred_rubric: true,
+    grading_basis_note: "No point values given, so equal credit per question.",
+    sections,
+    written_response_feedback: [],
+    things_to_fix: [{ priority: 1, title: "x", explanation: "y", location: "z", suggestion: "w" }],
+    strengths: [],
+    grammar_or_citation_issues: [],
+    overall_feedback: "ok",
+    disclaimer: "d",
+  });
+
+  it("replays the real bug: full credit on x-4=9 answered as 5 gets corrected and rescored", () => {
+    const result = baseResult([
+      section("Question 1", 25, 25),
+      section("Question 2", 25, 25), // x - 4 = 9, student wrote x = 5 (correct is 13)
+      section("Question 3", 25, 25),
+      section("Question 4", 25, 25),
+    ]);
+    const review = reviewCalcChecks([
+      { location: "Question 1", expression: "15 - 7", claimed_correct: 8, student_answer: 8 },
+      { location: "Question 2", expression: "9 + 4", claimed_correct: 13, student_answer: 5 },
+      { location: "Question 3", expression: "21 / 3", claimed_correct: 7, student_answer: 7 },
+      { location: "Question 4", expression: "5 * 4", claimed_correct: 20, student_answer: 20 },
+    ]).review;
+
+    const out = applyCalcCorrections(result, review, { partialCreditAllowed: true });
+
+    const q2 = out.sections.find((s) => s.name === "Question 2")!;
+    expect(q2.points_earned).toBeLessThan(25 * 0.6);
+    expect(q2.feedback).toContain("13");
+    expect(q2.feedback).toContain("not 5");
+    // Untouched, correct questions keep their original credit and wording.
+    expect(out.sections.find((s) => s.name === "Question 1")).toEqual(section("Question 1", 25, 25));
+
+    // 100 was never right; the corrected score must come down and never be a perfect 100 again.
+    expect(out.score).toBeLessThan(100);
+    expect(out.letter_grade).not.toBe("A+");
+    expect(out.grading_basis_note).toContain("rescored");
+  });
+
+  it("caps at zero, not a partial-credit ceiling, when partial credit is switched off", () => {
+    const result = baseResult([section("Question 1", 10, 10)]);
+    const review = reviewCalcChecks([
+      { location: "Question 1", expression: "9 + 4", claimed_correct: 13, student_answer: 5 },
+    ]).review;
+    const out = applyCalcCorrections(result, review, { partialCreditAllowed: false });
+    expect(out.sections[0].points_earned).toBe(0);
+  });
+
+  it("does nothing when there is nothing to correct", () => {
+    const result = baseResult([section("Question 1", 10, 10)]);
+    expect(applyCalcCorrections(result, [], { partialCreditAllowed: true })).toBe(result);
+    const confirmedRight = reviewCalcChecks([
+      { location: "Question 1", expression: "9 + 4", claimed_correct: 13, student_answer: 13 },
+    ]).review;
+    expect(applyCalcCorrections(result, confirmedRight, { partialCreditAllowed: true })).toBe(result);
+  });
+
+  it("does not touch a section that already scored low, or one with no possible points", () => {
+    const result = baseResult([section("Question 1", 2, 10)]);
+    const review = reviewCalcChecks([
+      { location: "Question 1", expression: "9 + 4", claimed_correct: 13, student_answer: 5 },
+    ]).review;
+    expect(applyCalcCorrections(result, review, { partialCreditAllowed: true })).toBe(result);
+  });
+
+  it("never corrects a section that plainly spans multiple questions", () => {
+    const result = baseResult([section("Questions 1-3", 30, 30)]);
+    const review = reviewCalcChecks([
+      { location: "Question 2", expression: "9 + 4", claimed_correct: 13, student_answer: 5 },
+    ]).review;
+    expect(applyCalcCorrections(result, review, { partialCreditAllowed: true })).toBe(result);
+  });
+
+  it("leaves needs_check-only mismatches alone when the section wasn't over-credited", () => {
+    // Model already gave a low score for Question 2 despite the wrong answer -- nothing to fix.
+    const result = baseResult([section("Question 2", 3, 25)]);
+    const review = reviewCalcChecks([
+      { location: "Question 2", expression: "9 + 4", claimed_correct: 13, student_answer: 5 },
+    ]).review;
+    const out = applyCalcCorrections(result, review, { partialCreditAllowed: true });
+    expect(out.sections[0].points_earned).toBe(3);
   });
 });
