@@ -8,6 +8,7 @@ import type { Assignment } from "@/lib/types";
 import { FileUploader } from "./file-uploader";
 import { GradingLoader } from "./grading-loader";
 import { limitsFor } from "@/lib/upload-limits";
+import { MAX_REQUEST_BYTES, formatMb, requestBytes, shrinkPhoto } from "@/lib/client-image";
 import type { Level, Subject } from "@/lib/grading/subjects";
 import { SUBJECT_CONFIG, type OptionKey } from "@/lib/subject-config";
 
@@ -222,11 +223,37 @@ export function GradeForm({
     if (cfg.fields.totalPoints && totalPoints.trim()) fd.set("total_points", totalPoints.trim());
     for (const t of cfg.toggles) fd.set(OPTION_FIELD[t.key], toggles[t.key] ? "1" : "0");
     if (regrade) fd.set("assignment_id", regrade.assignment.id);
-    materialFiles.forEach((f) => fd.append("material_files", f));
-    workFiles.forEach((f) => fd.append("work_files", f));
+    // Shrink photos in the browser first: phone photos are 4 to 6 MB each and the
+    // host rejects uploads over 4.5 MB. Order is preserved.
+    let [materials, works] = await Promise.all([
+      Promise.all(materialFiles.map((f) => shrinkPhoto(f))),
+      Promise.all(workFiles.map((f) => shrinkPhoto(f))),
+    ]);
+    let total = requestBytes([...materials, ...works], [materialText, workText]);
+    if (total > MAX_REQUEST_BYTES) {
+      // Still too big: squeeze harder before giving up. Text stays readable at this size.
+      const tight = { edge: 1300, quality: 0.65, force: true };
+      [materials, works] = await Promise.all([
+        Promise.all(materialFiles.map((f) => shrinkPhoto(f, tight))),
+        Promise.all(workFiles.map((f) => shrinkPhoto(f, tight))),
+      ]);
+      total = requestBytes([...materials, ...works], [materialText, workText]);
+    }
+    if (total > MAX_REQUEST_BYTES) {
+      setError(
+        `Your files add up to ${formatMb(total)}, and the limit per grade is ${formatMb(MAX_REQUEST_BYTES)}. Remove a file or use smaller photos (JPG works best), then try again.`,
+      );
+      setBusy(false);
+      return;
+    }
+    materials.forEach((f) => fd.append("material_files", f));
+    works.forEach((f) => fd.append("work_files", f));
 
     try {
       const res = await fetch("/api/grade", { method: "POST", body: fd });
+      if (res.status === 413) {
+        throw new Error("Those files are too large to upload together. Remove one or use smaller photos, then try again.");
+      }
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 401) {
