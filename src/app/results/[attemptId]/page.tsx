@@ -205,7 +205,7 @@ export default async function ResultsPage({
             ).map(([k, v]) => (
               <div key={k}>
                 <dt className="text-[11px] text-ink-muted">{k}</dt>
-                <dd className="mt-0.5 text-[13px] font-semibold leading-snug text-ink">{v}</dd>
+                <dd className="mt-0.5 break-words text-[13px] font-semibold leading-snug text-ink">{v}</dd>
               </div>
             ))}
           </dl>
