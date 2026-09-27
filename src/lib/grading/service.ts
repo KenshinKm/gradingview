@@ -23,6 +23,10 @@ export interface GradeSubmissionArgs extends GradingInput {
   workImages?: ImagePart[];
   /** Called with the model's answer so far while it streams in. */
   onText?: (textSoFar: string) => void;
+  /** Overrides the per-subject default thinking effort (used by stress tests). */
+  effort?: "low" | "medium" | "high";
+  /** Skips the thinking phase (stress tests / experiments). */
+  thinking?: "off";
 }
 
 export interface GradeSubmissionResult {
@@ -77,7 +81,8 @@ export async function gradeSubmission(
         user,
         images,
         onText: args.onText,
-        effort: effortFor(args.subject ?? "english"),
+        effort: args.effort ?? effortFor(args.subject ?? "english"),
+        thinking: args.thinking,
       });
       text = res.text;
       model = res.model;

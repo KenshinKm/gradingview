@@ -19,6 +19,8 @@ export interface LlmRequest {
   vision?: boolean;
   /** How hard the model thinks. Omit for the model's default. */
   effort?: "low" | "medium" | "high";
+  /** "off" skips the thinking phase entirely (fastest, least careful). */
+  thinking?: "off";
   /** Called with the full text so far as the answer streams in (Anthropic only). */
   onText?: (textSoFar: string) => void;
 }
@@ -87,6 +89,7 @@ async function callAnthropic(req: LlmRequest, model: string): Promise<LlmRespons
     // Thinking tokens count toward this. 8000 was cut off on long Math papers.
     max_tokens: 16000,
     ...(req.effort ? { output_config: { effort: req.effort } } : {}),
+    ...(req.thinking === "off" ? { thinking: { type: "disabled" as const } } : {}),
     system: req.system,
     messages: [{ role: "user" as const, content }],
   };
