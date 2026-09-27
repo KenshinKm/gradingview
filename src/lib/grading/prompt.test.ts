@@ -96,3 +96,27 @@ describe("English rubric-priority and grade-jump rules", () => {
     expect(p).toContain("Fixing this could increase your grade");
   });
 });
+
+describe("transparent self-chosen weighting", () => {
+  it("tells the model to disclose unequal inferred weights, for every subject", () => {
+    for (const subj of ["english", "math", "science"] as const) {
+      const p = buildSystemPrompt(subj);
+      expect(p).toContain("Be transparent about self-chosen weights");
+      expect(p).toContain("Never present a self-chosen weighting as if the rubric specified it");
+    }
+  });
+});
+
+describe("English citation rules", () => {
+  it("warns against flagging valid style variation as an error", () => {
+    const p = buildSystemPrompt("english");
+    expect(p).toContain("actually violates the rules of the selected style");
+    expect(p).toContain("do not flag a valid variation as wrong");
+  });
+
+  it("asks for proportional citation deductions, not overshadowing content", () => {
+    const p = buildSystemPrompt("english");
+    expect(p).toContain("Keep citation and formatting deductions proportional");
+    expect(p).toContain("do not let citation formatting nitpicks overshadow");
+  });
+});
