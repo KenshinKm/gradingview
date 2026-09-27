@@ -144,11 +144,19 @@ Respond with ONLY a single JSON object (no markdown fences, no prose). Write the
 const CALC_CHECKS_RULES = `
 CALCULATION CHECKS (extra output field "calc_checks")
 - Add a top-level "calc_checks" array to the JSON, right after "needs_check". The server will recompute each entry with real arithmetic and flag any disagreement, so write each one carefully.
-- Include up to 6 of the most important numeric calculations (final numeric answers, key intermediate values). Skip anything that is not plain arithmetic.
+- Include up to 6 of the most important numeric results the student reports: final numeric answers, and derived values such as rates, percent change, unit conversions, and key intermediate values. Skip anything that is not plain arithmetic.
 - Each entry: { "location": string (for example "Question 5"), "what": string (a few words), "expression": string, "claimed_correct": number, "student_answer": number or null }
 - "expression" computes the CORRECT answer from the problem's given values, written with numbers only: + - * / ^ ( ) and sqrt, abs, ln, log10, exp, sin, cos, tan, pi. No variables, no units, no implicit multiplication (write 2*(3+4), not 2(3+4)). Use degrees-to-radians conversion inside the expression when needed.
 - "claimed_correct" is the value you believe that expression gives, at full precision. "student_answer" is the student's own final numeric answer for that item, or null if not numeric or not readable.
 - If calculation checking is switched off in the student message, return "calc_checks": [].`;
+
+const SHORT_OUTPUT_RULES = `
+KEEP THE ANSWER SHORT (the student is waiting; every extra word costs seconds)
+- "sections[].feedback": ONE short sentence (about 20 words). Name the exact step or error and the credit given.
+- "things_to_fix": at most 3 items, only the most costly. "explanation" and "suggestion" each ONE short sentence.
+- "strengths": at most 1 item. "grammar_or_citation_issues": []. "written_response_feedback": [] unless a response truly needs it.
+- "overall_feedback": 2 short sentences.
+- "understood" values: 1 to 4 words each.`;
 
 const SUBJECT_RULES: Record<Subject, string> = {
   english: `============================================================
@@ -167,7 +175,8 @@ SUBJECT: MATH
 - Use the location field for question numbers and steps (for example "Question 5, step 2").
 - Grade step by step. Make one section per problem (group them if there are more than 12). In each section's feedback name the FIRST step where the student went wrong, or say the method is right, and say how much credit the earlier correct steps earned.
 - Word "things_to_fix" by the exact question and step, for example "Question 8, completing the square: added 9 to one side only".
-${CALC_CHECKS_RULES}`,
+${CALC_CHECKS_RULES}
+${SHORT_OUTPUT_RULES}`,
   science: `============================================================
 SUBJECT: SCIENCE
 ============================================================
@@ -176,7 +185,8 @@ SUBJECT: SCIENCE
 - Conclusions must be supported by the student's own data. Call out claims the data does not support.
 - Judge scientific facts at the student's level (high school or college). A simplified model is acceptable at high school level when taught that way. If you are not sure a fact is right, put it in "needs_check" instead of deducting.
 - In each section's feedback, say which part of the report or problem the points came from (data table, graph, calculation, conclusion).
-${CALC_CHECKS_RULES}`,
+${CALC_CHECKS_RULES}
+${SHORT_OUTPUT_RULES}`,
 };
 
 /** Full system prompt: the shared rules plus the rules for the selected subject. */

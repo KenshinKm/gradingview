@@ -14,7 +14,7 @@ import type { GradeResult, GradeUsage } from "./schema";
 import { estimateCostUsd } from "@/lib/llm-cost";
 import { LEVEL_LABEL, SUBJECT_LABEL } from "./subjects";
 import { reviewCalcChecks } from "./calc-check";
-import { effortFor } from "./effort";
+import { effortFor, type Effort, type Reasoning } from "./effort";
 
 export interface GradeSubmissionArgs extends GradingInput {
   /** Grading-material images, in user-defined order. */
@@ -40,6 +40,13 @@ export interface GradeSubmissionResult {
  * output, and retries once with a stricter instruction on malformed output.
  * Throws on unrecoverable failure — callers must NOT record usage in that case.
  */
+/** Maps the chosen reasoning level (explicit override, else per-subject default) to LLM options. */
+function reasoningParams(args: GradeSubmissionArgs): { effort?: Effort; thinking?: "off" } {
+  const r: Reasoning | undefined = args.thinking === "off" ? "off" : (args.effort ?? effortFor(args.subject ?? "english"));
+  if (r === "off") return { thinking: "off" };
+  return r ? { effort: r } : {};
+}
+
 export async function gradeSubmission(
   args: GradeSubmissionArgs,
 ): Promise<GradeSubmissionResult> {
@@ -81,8 +88,7 @@ export async function gradeSubmission(
         user,
         images,
         onText: args.onText,
-        effort: args.effort ?? effortFor(args.subject ?? "english"),
-        thinking: args.thinking,
+        ...reasoningParams(args),
       });
       text = res.text;
       model = res.model;
