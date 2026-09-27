@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
     pastedMaterials.length > 0 || materialFiles.length > 0 || !!existingAssignmentId;
   const hasWorkSource = pastedWork.length > 0 || workFiles.length > 0;
 
-  // Math papers carry their own questions, so grading materials are optional there.
+  // Math and Science papers can carry their own questions, so grading materials are optional there.
   if (!hasMaterialSource && !SUBJECT_CONFIG[subject].materials.optional) {
     return NextResponse.json(
       { error: "Add your grading materials (upload or paste).", code: "missing_materials" },

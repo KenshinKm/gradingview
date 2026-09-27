@@ -193,6 +193,7 @@ ${SHORT_OUTPUT_RULES}`,
 SUBJECT: SCIENCE
 ============================================================
 - Judge according to the grading materials: hypothesis or purpose, procedure, data and graphs, calculations and units, analysis, conclusion, and scientific writing.
+- There may be no grading materials at all, especially for a short worksheet or problem set: the questions are on the student's own paper. Judge correctness yourself and infer sections that fit what was actually submitted (a worksheet of numbered questions doesn't need a "hypothesis" or "procedure" section it never had). Don't trust the student's stated answer on a calculation; work it out yourself.
 - Re-check calculations yourself. Check units and significant figures when the materials ask for it.
 - Conclusions must be supported by the student's own data. Call out claims the data does not support.
 - Judge scientific facts at the student's level (high school or college). A simplified model is acceptable at high school level when taught that way. If you are not sure a fact is right, put it in "needs_check" instead of deducting.
@@ -247,7 +248,7 @@ export function buildUserPrompt(input: GradingInput): string {
   const workImages = input.workImageCount ?? 0;
   if (!input.gradingMaterialsText?.trim() && materialImages === 0)
     meta.push(
-      "No grading materials were provided. The questions are on the student's paper. Use any point values printed there, otherwise assume equal points per question, and say so in grading_basis_note.",
+      "No grading materials were provided. The questions/tasks are on the student's own paper. Use any point values printed there, otherwise assume equal points per question or section, and say so in grading_basis_note.",
     );
   const imageNotes: string[] = [];
   if (materialImages > 0)

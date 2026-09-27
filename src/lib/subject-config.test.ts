@@ -23,10 +23,12 @@ describe("subject config", () => {
     expect(SUBJECT_CONFIG.science.beta).toBe(true);
   });
 
-  it("makes grading materials optional for Math only", () => {
+  it("makes grading materials optional for Math and Science, required for English", () => {
     expect(SUBJECT_CONFIG.math.materials.optional).toBe(true);
+    expect(SUBJECT_CONFIG.science.materials.optional).toBe(true);
     expect(SUBJECT_CONFIG.english.materials.optional).toBe(false);
-    expect(SUBJECT_CONFIG.science.materials.optional).toBe(false);
+    expect(SUBJECT_CONFIG.math.materials.optionalNote).toBeTruthy();
+    expect(SUBJECT_CONFIG.science.materials.optionalNote).toBeTruthy();
   });
 
   it("keeps visible copy free of em-dashes", () => {

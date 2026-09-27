@@ -187,9 +187,9 @@ export const SUBJECT_CONFIG: Record<Subject, SubjectConfig> = {
     metaTitle: "Science",
     metaDescription:
       "Upload your lab report, problem set, or short answers and get an estimated grade before you submit.",
-    sub: "Upload your lab rubric and your report or problem set. See your estimated grade, where you lost points, and what to fix first.",
+    sub: "Upload your report, problem set, or worksheet. See your estimated grade, where you lost points, and what to fix first.",
     blurb:
-      "Built for lab reports, problem sets, and short answers across biology, chemistry, and physics. Feedback covers your reasoning, your data, and your calculations.",
+      "Built for lab reports, problem sets, worksheets, and short answers across biology, chemistry, and physics. Grading materials are optional, a quick worksheet is fine on its own. Feedback covers your reasoning, your data, and your calculations.",
     stats: [
       ["Works with", "DOCX · PDF · photos"],
       ["Handles", "labs · problem sets · short answers"],
@@ -202,15 +202,17 @@ export const SUBJECT_CONFIG: Record<Subject, SubjectConfig> = {
       "A re-grade after you revise",
     ],
     materials: {
-      desc: "Upload anything that explains how your lab or assignment will be graded.",
+      desc: "Add a rubric, handout, or grading instructions for a more accurate grade. Skip it for a quick worksheet with the questions right there.",
       chips: ["lab rubric", "lab handout", "report requirements", "data tables", "grading instructions"],
-      tip: "Taking a photo? Make sure the whole page is visible, in focus, and well-lit for the most accurate grade.",
-      optional: false,
+      tip: "Have a photo of the rubric or grading instructions? Add it here. Otherwise skip this section.",
+      optional: true,
+      optionalNote:
+        "No grading materials? We assume equal points per question or section unless your paper shows them. Your result will say so and show a wider likely range.",
     },
     work: {
-      desc: "Upload your lab report, problem set, or short answers. Include graphs and data tables in the file or as photos.",
+      desc: "Upload your lab report, problem set, worksheet, or short answers. Include graphs and data tables in the file or as photos.",
       tip: "Photographing a graph or data table? Keep the axes, labels, and units fully in frame.",
-      placeholder: "Paste your lab report, answers, or written responses here…",
+      placeholder: "Paste your lab report, worksheet answers, or written responses here…",
     },
     hint: HINT,
     checks: [
