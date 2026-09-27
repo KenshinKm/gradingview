@@ -7,7 +7,40 @@ import { gradeColors } from "@/lib/grade-colors";
 import type { Subject } from "@/lib/grading/subjects";
 import { GradingLoader } from "./grading-loader";
 
-const POLL_MS = 1500;
+const POLL_MS = 1000;
+
+/**
+ * Text that types itself out toward `text` as more of it arrives, like a chat
+ * reply. `animate` is false for content that was already there when the page
+ * opened, so reloading doesn't replay it.
+ */
+function Typed({ text, animate, writing }: { text: string; animate: boolean; writing?: boolean }) {
+  const [n, setN] = useState(animate ? 0 : text.length);
+
+  useEffect(() => {
+    if (!animate) return;
+    const t = setInterval(() => {
+      setN((prev) => {
+        const gap = text.length - prev;
+        if (gap <= 0) return prev;
+        // Steady typing, but catch up quickly when the AI is ahead of us.
+        return prev + Math.max(1, Math.ceil(gap * 0.12));
+      });
+    }, 30);
+    return () => clearInterval(t);
+  }, [text, animate]);
+
+  const shown = animate ? text.slice(0, n) : text;
+  const typing = animate && (n < text.length || writing);
+  return (
+    <>
+      {shown}
+      {typing && (
+        <span aria-hidden className="ml-0.5 inline-block h-[1em] w-[2px] translate-y-[2px] animate-pulse bg-ink-muted" />
+      )}
+    </>
+  );
+}
 
 /**
  * Shown while a grade is being made. Pieces appear here as the AI writes them
@@ -28,6 +61,11 @@ export function LiveResults({
   const [partial, setPartial] = useState<PartialResult | null>(initial);
   const [seconds, setSeconds] = useState(0);
   const done = useRef(false);
+  // Items already on screen when the page opened show instantly; new ones type out.
+  const seen = useRef({
+    sections: initial?.sections.length ?? 0,
+    fixes: initial?.things_to_fix.length ?? 0,
+  });
 
   useEffect(() => {
     const clock = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -113,16 +151,22 @@ export function LiveResults({
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-sm font-semibold text-ink">{c.name}</h3>
                     <span className="shrink-0 text-sm font-semibold text-ink-soft">
-                      {Math.round(c.points_earned * 10) / 10} / {Math.round(c.points_possible * 10) / 10}
+                      {c.points_possible > 0
+                        ? `${Math.round(c.points_earned * 10) / 10} / ${Math.round(c.points_possible * 10) / 10}`
+                        : "…"}
                     </span>
                   </div>
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
                     <div
-                      className={`h-full rounded-full ${gc.bar}`}
-                      style={{ width: `${Math.max(3, Math.min(100, pct))}%` }}
+                      className={`h-full rounded-full transition-all duration-500 ${gc.bar}`}
+                      style={{ width: `${c.points_possible > 0 ? Math.max(3, Math.min(100, pct)) : 0}%` }}
                     />
                   </div>
-                  {c.feedback && <p className="mt-2 text-xs leading-relaxed text-ink-muted">{c.feedback}</p>}
+                  {(c.feedback || c.writing) && (
+                    <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+                      <Typed text={c.feedback} animate={i >= seen.current.sections} writing={c.writing} />
+                    </p>
+                  )}
                 </div>
               );
             })}
@@ -143,18 +187,24 @@ export function LiveResults({
                 </span>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-2">
-                    <h3 className="font-semibold text-ink">{t.title}</h3>
+                    <h3 className="font-semibold text-ink">
+                      <Typed text={t.title} animate={i >= seen.current.fixes} writing={t.writing && !t.explanation} />
+                    </h3>
                     {t.location && (
                       <span className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
                         {t.location}
                       </span>
                     )}
                   </div>
-                  {t.explanation && <p className="mt-1 text-sm text-ink-soft">{t.explanation}</p>}
+                  {t.explanation && (
+                    <p className="mt-1 text-sm text-ink-soft">
+                      <Typed text={t.explanation} animate={i >= seen.current.fixes} writing={t.writing && !t.suggestion} />
+                    </p>
+                  )}
                   {t.suggestion && (
                     <p className="mt-1 text-sm text-ink">
                       <span className="font-semibold text-brand-400">Fix: </span>
-                      {t.suggestion}
+                      <Typed text={t.suggestion} animate={i >= seen.current.fixes} writing={t.writing} />
                     </p>
                   )}
                 </div>

@@ -114,7 +114,7 @@ function retryParams(p: GradingJobParams) {
 
 /**
  * Saves what the model has written so far onto the attempt (at most every
- * ~1.2s, only when something new is complete) so the results page can show it.
+ * ~0.6s, only when something new is complete) so the results page can show it.
  * Writes never block grading and only apply while the attempt is processing.
  */
 function livePartialWriter(attemptId: string) {
@@ -126,7 +126,7 @@ function livePartialWriter(attemptId: string) {
 
   function onText(text: string) {
     const now = Date.now();
-    if (stopped || inFlight || now - lastAt < 1200) return;
+    if (stopped || inFlight || now - lastAt < 600) return;
     const partial = parsePartial(text);
     if (isEmptyPartial(partial)) return;
     const sig = partialSignature(partial);
