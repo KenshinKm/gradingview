@@ -17,6 +17,8 @@ export interface LlmRequest {
   images?: ImagePart[];
   /** Force the vision-capable model. */
   vision?: boolean;
+  /** How hard the model thinks. Omit for the model's default. */
+  effort?: "low" | "medium" | "high";
   /** Called with the full text so far as the answer streams in (Anthropic only). */
   onText?: (textSoFar: string) => void;
 }
@@ -82,7 +84,9 @@ async function callAnthropic(req: LlmRequest, model: string): Promise<LlmRespons
 
   const params = {
     model,
-    max_tokens: 8000,
+    // Thinking tokens count toward this. 8000 was cut off on long Math papers.
+    max_tokens: 16000,
+    ...(req.effort ? { output_config: { effort: req.effort } } : {}),
     system: req.system,
     messages: [{ role: "user" as const, content }],
   };

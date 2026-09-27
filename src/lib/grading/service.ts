@@ -14,6 +14,7 @@ import type { GradeResult, GradeUsage } from "./schema";
 import { estimateCostUsd } from "@/lib/llm-cost";
 import { LEVEL_LABEL, SUBJECT_LABEL } from "./subjects";
 import { reviewCalcChecks } from "./calc-check";
+import { effortFor } from "./effort";
 
 export interface GradeSubmissionArgs extends GradingInput {
   /** Grading-material images, in user-defined order. */
@@ -71,7 +72,13 @@ export async function gradeSubmission(
     let text: string;
     let model: string;
     try {
-      const res = await callLlm({ system, user, images, onText: args.onText });
+      const res = await callLlm({
+        system,
+        user,
+        images,
+        onText: args.onText,
+        effort: effortFor(args.subject ?? "english"),
+      });
       text = res.text;
       model = res.model;
       calls += 1;
