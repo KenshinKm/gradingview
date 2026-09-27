@@ -23,7 +23,7 @@ export const runtime = "nodejs";
 // Grading runs after the response (see runGradingJob), so it shares this limit.
 export const maxDuration = 300;
 
-const CITATION_STYLES = new Set(["not_specified", "mla", "apa", "chicago", "other"]);
+const CITATION_STYLES = new Set(["not_specified", "not_required", "mla", "apa", "chicago", "other"]);
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();

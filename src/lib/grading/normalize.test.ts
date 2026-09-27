@@ -158,10 +158,21 @@ describe("normalizeResult — inference & errors", () => {
     expect(r.letter_grade).toBe("B-");
   });
 
-  it("throws when there are no actionable fixes", () => {
+  it("throws when there are no actionable fixes on work that isn't near-perfect", () => {
     expect(() =>
       normalizeResult({ score: 90, sections: [], things_to_fix: [], overall_feedback: "great" }),
     ).toThrow(GradingValidationError);
+  });
+
+  it("allows an empty things_to_fix on genuinely near-perfect work", () => {
+    const r = normalizeResult({
+      score: 100,
+      sections: [{ name: "All", points_earned: 10, points_possible: 10, feedback: "Meets every requirement." }],
+      things_to_fix: [],
+      overall_feedback: "Meets everything the rubric asks for.",
+    });
+    expect(r.things_to_fix).toEqual([]);
+    expect(r.score).toBe(100);
   });
 
   it("throws when the score cannot be determined", () => {

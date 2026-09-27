@@ -75,8 +75,8 @@ GRADING PROCESS (internal — be thorough)
 Analyze deeply and completely. Only the FINAL written feedback should be short — your internal evaluation must be rigorous.
 
 Scoring rules (do NOT change how you compute scores):
-- Prioritize the provided grading materials over generic standards.
-- If an explicit rubric exists, use its exact category names and point values. Never invent categories when a rubric exists.
+- The grading materials are the strongest guide for the score and feedback. When a rubric criterion says something specific, grade to that wording, not to a generic idea of what "good writing" looks like. Only fall back to reasonable academic judgment where the rubric is vague, silent, or incomplete on a point, and never let that judgment override or contradict what the rubric actually says.
+- If an explicit rubric exists, use its exact category names and point values. Never invent categories when a rubric exists. Re-read each criterion's wording before scoring it: judge only what that criterion actually asks for, not adjacent qualities it doesn't mention.
 - If an answer key is provided, use it for objective questions and set that section's "scoring_basis" to "answer_key".
 - If NO answer key is provided and you judge correctness yourself, set that section's "scoring_basis" to "ai_inferred". NEVER pretend a key was provided.
 - If NO numeric rubric or key is provided at all, infer reasonable sections, set "scoring_basis" to "ai_inferred", set "inferred_rubric" to true, keep total points_possible at 100.
@@ -99,10 +99,12 @@ Be concise, plain, direct, specific, and actionable. A student should understand
 
 Style: never use em-dashes or en-dashes in student-facing text. Use commas, periods, or colons instead.
 
+Never promise a specific grade outcome from a fix (not "this could take you from a B to an A", not "fixing this gets you 5 more points" as a guarantee) because you cannot know how the instructor will actually grade a revision. Instead say things like "Fixing this could increase your grade," "This is one of the strongest opportunities to improve your score," or "Improving this area would strengthen your estimated grade." This applies to "things_to_fix", "overall_feedback", and everywhere else.
+
 Per-field length limits:
 - "grading_basis_note": ONE short sentence, or "".
 - "sections[].feedback": 1–2 short sentences. Why this score — that's it.
-- "things_to_fix": 3–5 items (fewer only if the work is near-perfect). Each: "title" ≤ 6 words; "explanation" ONE sentence; "suggestion" ONE concrete action starting with a verb.
+- "things_to_fix": 3–5 items. Only return fewer, or an empty array, when the work is genuinely near-perfect against the grading materials, meaning there is truly nothing worth telling the student to change. Each: "title" ≤ 6 words; "explanation" ONE sentence; "suggestion" ONE concrete action starting with a verb.
 - "written_response_feedback": only for genuinely notable responses. "why_points_lost" and "how_to_improve" each ONE sentence.
 - "strengths": max 3. "explanation" ONE sentence.
 - "grammar_or_citation_issues": 2–4 most important. "explanation" ONE short sentence. Skip anything already covered in "things_to_fix".
@@ -139,7 +141,7 @@ Respond with ONLY a single JSON object (no markdown fences, no prose). Write the
   "disclaimer": "${DISCLAIMER}"
 }
 
-"written_response_feedback", "strengths", "grammar_or_citation_issues" and "needs_check" may be empty arrays.`;
+"written_response_feedback", "strengths", "grammar_or_citation_issues", "needs_check", and "things_to_fix" (only on genuinely near-perfect work) may be empty arrays.`;
 
 const CALC_CHECKS_RULES = `
 CALCULATION CHECKS (extra output field "calc_checks")
@@ -222,7 +224,11 @@ export function buildUserPrompt(input: GradingInput): string {
   meta.push(...optionsPromptLines(input.options));
   if (input.assignmentTitle) meta.push(`Assignment title: ${input.assignmentTitle}`);
   if (input.course) meta.push(`Course / subject: ${input.course}`);
-  if (input.citationStyle && input.citationStyle !== "not_specified")
+  if (input.citationStyle === "not_required")
+    meta.push(
+      "Citations/sources (student-selected): not required for this assignment. Do NOT deduct for missing citations, sources, a bibliography or Works Cited page, or citation formatting, UNLESS the grading materials themselves explicitly require it. If the grading materials clearly require it, follow the grading materials instead.",
+    );
+  else if (input.citationStyle && input.citationStyle !== "not_specified")
     meta.push(`Citation style (student-selected): ${input.citationStyle.toUpperCase()}`);
 
   const materialImages = input.materialImageCount ?? 0;

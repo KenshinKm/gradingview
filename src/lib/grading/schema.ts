@@ -111,7 +111,7 @@ export const gradeResultSchema = z.object({
   grading_basis_note: z.string().optional().default(""),
   sections: z.array(sectionSchema),
   written_response_feedback: z.array(writtenResponseFeedbackSchema).default([]),
-  things_to_fix: z.array(thingToFixSchema).min(1).max(9),
+  things_to_fix: z.array(thingToFixSchema).max(9),
   strengths: z.array(strengthSchema),
   grammar_or_citation_issues: z.array(grammarIssueSchema),
   overall_feedback: z.string().min(1),

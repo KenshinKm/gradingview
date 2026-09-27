@@ -62,4 +62,37 @@ describe("buildUserPrompt", () => {
       "confirmed that these grading materials",
     );
   });
+
+  it("tells the model not to deduct for citations when not required", () => {
+    const u = buildUserPrompt({ ...base, citationStyle: "not_required" });
+    expect(u).toContain("not required for this assignment");
+    expect(u).toContain("Do NOT deduct for missing citations");
+    expect(u).not.toContain("Citation style (student-selected): NOT_REQUIRED");
+  });
+
+  it("still passes an explicit citation style normally", () => {
+    const u = buildUserPrompt({ ...base, citationStyle: "mla" });
+    expect(u).toContain("Citation style (student-selected): MLA");
+    expect(u).not.toContain("not required for this assignment");
+  });
+
+  it("says nothing about citations when not specified", () => {
+    const u = buildUserPrompt({ ...base, citationStyle: "not_specified" });
+    expect(u).not.toContain("Citation style");
+    expect(u).not.toContain("not required for this assignment");
+  });
+});
+
+describe("English rubric-priority and grade-jump rules", () => {
+  it("tells the model to grade to the rubric's exact wording", () => {
+    const p = buildSystemPrompt("english");
+    expect(p).toContain("strongest guide for the score and feedback");
+    expect(p).toContain("not to a generic idea");
+  });
+
+  it("bans promising a specific grade jump and gives safe alternatives", () => {
+    const p = buildSystemPrompt("english");
+    expect(p).toContain("Never promise a specific grade outcome");
+    expect(p).toContain("Fixing this could increase your grade");
+  });
 });

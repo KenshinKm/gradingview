@@ -512,6 +512,7 @@ export function GradeForm({
                 disabled={!!regrade}
               >
                 <option value="not_specified">Not specified</option>
+                <option value="not_required">Not required</option>
                 <option value="mla">MLA</option>
                 <option value="apa">APA</option>
                 <option value="chicago">Chicago</option>

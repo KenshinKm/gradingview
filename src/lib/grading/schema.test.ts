@@ -49,9 +49,9 @@ describe("gradeResultSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects an empty things_to_fix array", () => {
+  it("allows an empty things_to_fix array at the schema level (normalizeResult enforces the score-aware rule)", () => {
     expect(gradeResultSchema.safeParse({ ...valid, things_to_fix: [] }).success).toBe(
-      false,
+      true,
     );
   });
 

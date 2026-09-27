@@ -235,7 +235,9 @@ export function normalizeResult(input: unknown): GradeResult {
     .map((t, i) => ({ ...t, priority: i + 1 }))
     .slice(0, 9);
 
-  if (thingsToFix.length === 0) {
+  // An empty list is only trustworthy on genuinely near-perfect work; otherwise
+  // it's almost always the model skipping a required field, so retry.
+  if (thingsToFix.length === 0 && score < 97) {
     throw new GradingValidationError("Model returned no actionable fixes");
   }
 
