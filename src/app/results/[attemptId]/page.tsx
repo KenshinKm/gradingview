@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
-import { AutoRefresh } from "@/components/auto-refresh";
+import { LiveResults } from "@/components/live-results";
+import { MismatchActions } from "@/components/mismatch-actions";
+import type { PartialResult } from "@/lib/grading/partial";
 import { GradeHero } from "@/components/grade-hero";
 import { ScoringBasisBadge } from "@/components/scoring-basis-badge";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
@@ -50,11 +52,19 @@ export default async function ResultsPage({
   if (!attempt) notFound();
   const assignment = attempt.assignments;
 
+  const stored = attempt.result as unknown as {
+    blocked?: { code?: string; mismatch?: { summary?: string; suggestion?: string } };
+    partial?: PartialResult;
+  } | null;
+
   if (attempt.status === "failed") {
+    const mismatch = stored?.blocked?.code === "context_mismatch";
     return (
       <Shell userId={user.id}>
         <div className="card text-center">
-          <h1 className="text-xl font-semibold text-ink">Grading didn&apos;t finish</h1>
+          <h1 className="text-xl font-semibold text-ink">
+            {mismatch ? "Before we grade this, double-check your files" : "Grading didn't finish"}
+          </h1>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
             {attempt.error_message ||
               "Something went wrong while grading this submission."}
@@ -62,15 +72,19 @@ export default async function ResultsPage({
           <p className="mt-2 text-xs text-ink-muted">
             Your grading credit was not used.
           </p>
-          <Link href={`/grade?assignment=${assignment.id}`} className="btn-primary mt-4">
-            Try again
-          </Link>
+          {mismatch ? (
+            <MismatchActions attemptId={attempt.id} assignmentId={assignment.id} />
+          ) : (
+            <Link href={`/grade?assignment=${assignment.id}`} className="btn-primary mt-4">
+              Try again
+            </Link>
+          )}
         </div>
       </Shell>
     );
   }
 
-  if (attempt.status !== "complete" || !attempt.result) {
+  if (attempt.status !== "complete" || !attempt.result || stored?.partial) {
     // Grading runs in the background. A job stuck this long has died and was never charged.
     const stuck = Date.now() - new Date(attempt.created_at).getTime() > STALE_PROCESSING_MS;
     if (stuck) {
@@ -90,14 +104,17 @@ export default async function ResultsPage({
     }
     return (
       <Shell userId={user.id}>
-        <AutoRefresh />
-        <div className="card flex flex-col items-center gap-3 py-14 text-center">
-          <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-line border-t-brand-600" />
-          <h1 className="text-lg font-semibold text-ink">Still working on your grade</h1>
-          <p className="max-w-sm text-sm text-ink-muted">
-            This page updates on its own. You&apos;re only charged if the grade finishes.
+        <div className="mb-5">
+          <h1 className="text-xl font-bold tracking-tight text-ink">{assignment.title}</h1>
+          <p className="text-sm text-ink-muted">
+            {assignment.course ? `${assignment.course} · ` : ""}Your results appear here as they&apos;re ready
           </p>
         </div>
+        <LiveResults
+          attemptId={attempt.id}
+          initial={stored?.partial ?? null}
+          subject={parseSubject(stored?.partial?.understood?.subject?.toLowerCase())}
+        />
       </Shell>
     );
   }

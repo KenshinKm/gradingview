@@ -20,6 +20,8 @@ export interface GradeSubmissionArgs extends GradingInput {
   materialImages?: ImagePart[];
   /** "Your work" page images, in user-defined order. */
   workImages?: ImagePart[];
+  /** Called with the model's answer so far while it streams in. */
+  onText?: (textSoFar: string) => void;
 }
 
 export interface GradeSubmissionResult {
@@ -69,7 +71,7 @@ export async function gradeSubmission(
     let text: string;
     let model: string;
     try {
-      const res = await callLlm({ system, user, images });
+      const res = await callLlm({ system, user, images, onText: args.onText });
       text = res.text;
       model = res.model;
       calls += 1;

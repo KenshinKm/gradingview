@@ -17,6 +17,8 @@ export interface LlmRequest {
   images?: ImagePart[];
   /** Force the vision-capable model. */
   vision?: boolean;
+  /** Called with the full text so far as the answer streams in (Anthropic only). */
+  onText?: (textSoFar: string) => void;
 }
 
 export interface LlmResponse {
@@ -78,12 +80,29 @@ async function callAnthropic(req: LlmRequest, model: string): Promise<LlmRespons
     });
   }
 
-  const res = await client.messages.create({
+  const params = {
     model,
     max_tokens: 8000,
     system: req.system,
-    messages: [{ role: "user", content }],
-  });
+    messages: [{ role: "user" as const, content }],
+  };
+
+  let res: Anthropic.Message;
+  if (req.onText) {
+    // Stream so the student can watch results appear while we're still writing them.
+    const onText = req.onText;
+    const stream = client.messages.stream(params);
+    stream.on("text", (_delta, snapshot) => {
+      try {
+        onText(snapshot);
+      } catch {
+        // a display problem must never break grading
+      }
+    });
+    res = await stream.finalMessage();
+  } else {
+    res = await client.messages.create(params);
+  }
 
   const text = res.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")

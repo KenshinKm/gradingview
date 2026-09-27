@@ -8,7 +8,6 @@ import type { Assignment } from "@/lib/types";
 import { FileUploader } from "./file-uploader";
 import { GradingLoader } from "./grading-loader";
 import { limitsFor } from "@/lib/upload-limits";
-import type { ContextMismatch } from "@/lib/grading/normalize";
 import type { Level, Subject } from "@/lib/grading/subjects";
 import { SUBJECT_CONFIG, type OptionKey } from "@/lib/subject-config";
 
@@ -135,37 +134,6 @@ function ExampleChips({ items }: { items: string[] }) {
   );
 }
 
-interface AttemptOutcome {
-  status: "complete" | "failed";
-  code?: string;
-  error?: string;
-  mismatch?: unknown;
-}
-
-/** Polls the server until the attempt finishes. Keeps going while the tab is open. */
-async function waitForAttempt(attemptId: string): Promise<AttemptOutcome> {
-  let misses = 0;
-  for (;;) {
-    await new Promise((r) => setTimeout(r, 2500));
-    try {
-      const res = await fetch(`/api/grade/status?attemptId=${attemptId}`, { cache: "no-store" });
-      if (!res.ok) throw new Error(String(res.status));
-      const data = await res.json();
-      misses = 0;
-      if (data.status === "complete") return { status: "complete" };
-      if (data.status === "failed") return { status: "failed", ...data };
-    } catch {
-      // A dropped connection isn't a failed grade. Give up only after many misses.
-      if (++misses >= 12) {
-        return {
-          status: "failed",
-          error: "We lost connection while grading. Check your Dashboard in a minute, your grade may still finish.",
-        };
-      }
-    }
-  }
-}
-
 export function GradeForm({
   regrade,
   variant = "page",
@@ -226,8 +194,6 @@ export function GradeForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
-  const [mismatch, setMismatch] = useState<ContextMismatch | null>(null);
-  const [activeAttempt, setActiveAttempt] = useState<string | null>(null);
 
   const textChars = materialText.length + workText.length;
   const overTextLimit = textChars > limits.maxTextChars;
@@ -237,10 +203,9 @@ export function GradeForm({
   const hasWork = workFiles.length > 0 || workText.trim().length > 0;
   const ready = (hasMaterials || materialsOptional) && hasWork && !overTextLimit;
 
-  async function runGrade(confirmContext = false) {
+  async function runGrade() {
     setBusy(true);
     setError(null);
-    setMismatch(null);
     if (regrade) track("regrade_clicked");
     else track("grading_started", { source: variant });
 
@@ -256,7 +221,6 @@ export function GradeForm({
     if (cfg.fields.topic && topic.trim()) fd.set("topic", topic.trim());
     if (cfg.fields.totalPoints && totalPoints.trim()) fd.set("total_points", totalPoints.trim());
     for (const t of cfg.toggles) fd.set(OPTION_FIELD[t.key], toggles[t.key] ? "1" : "0");
-    if (confirmContext) fd.set("confirm_context", "1");
     if (regrade) fd.set("assignment_id", regrade.assignment.id);
     materialFiles.forEach((f) => fd.append("material_files", f));
     workFiles.forEach((f) => fd.append("work_files", f));
@@ -275,29 +239,11 @@ export function GradeForm({
           router.push(`/pricing?reason=${data.code ?? "not_entitled"}`);
           return;
         }
-        if (res.status === 422 && data.code === "context_mismatch" && data.mismatch) {
-          setMismatch(data.mismatch as ContextMismatch);
-          setBusy(false);
-          return;
-        }
         throw new Error(data.error || "Grading failed. Please try again.");
       }
-      // Grading continues on the server even if the student leaves this tab.
-      // Poll until it finishes; only a finished grade is charged.
-      const attemptId = data.attemptId as string;
-      setActiveAttempt(attemptId);
-      const outcome = await waitForAttempt(attemptId);
-      if (outcome.status === "complete") {
-        router.push(`/results/${attemptId}`);
-        return;
-      }
-      if (outcome.code === "context_mismatch" && outcome.mismatch) {
-        setMismatch(outcome.mismatch as ContextMismatch);
-        setBusy(false);
-        setActiveAttempt(null);
-        return;
-      }
-      throw new Error(outcome.error || "Grading failed. Please try again.");
+      // Grading continues on the server and the results page fills in live,
+      // so send the student there right away. Only a finished grade is charged.
+      router.push(`/results/${data.attemptId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setBusy(false);
@@ -327,7 +273,7 @@ export function GradeForm({
     await runGrade();
   }
 
-  if (busy) return <GradingLoader subject={subject} attemptId={activeAttempt} />;
+  if (busy) return <GradingLoader subject={subject} uploading />;
 
   const submitLabel = regrade ? "Check My Revision" : "Grade My Work";
 
@@ -565,32 +511,6 @@ export function GradeForm({
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             That&apos;s too much text ({textChars.toLocaleString()} characters). The limit is{" "}
             {limits.maxTextChars.toLocaleString()} across everything you paste. Try trimming it down.
-          </div>
-        )}
-
-        {mismatch && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
-            <p className="font-semibold">Before we grade this, double-check your files</p>
-            <p className="mt-1.5 leading-relaxed text-amber-100/90">
-              {[mismatch.summary, mismatch.suggestion].filter(Boolean).join(" ")}
-            </p>
-            <p className="mt-1 text-xs text-amber-100/70">You were not charged.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="btn-secondary px-4 py-2"
-                onClick={() => setMismatch(null)}
-              >
-                Let me fix my files
-              </button>
-              <button
-                type="button"
-                className="btn-ghost px-4 py-2"
-                onClick={() => void runGrade(true)}
-              >
-                Grade it anyway
-              </button>
-            </div>
           </div>
         )}
 

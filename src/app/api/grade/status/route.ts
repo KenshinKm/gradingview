@@ -9,7 +9,7 @@ type Row = {
   status: string;
   error_message: string | null;
   created_at: string;
-  result: { blocked?: { code?: string; mismatch?: unknown; images?: unknown } } | null;
+  result: { blocked?: { code?: string; mismatch?: unknown; images?: unknown }; partial?: unknown } | null;
 };
 
 /** Progress of one grading attempt, for the form and the results page to poll. */
@@ -61,5 +61,8 @@ export async function GET(req: NextRequest) {
       noStore,
     );
   }
-  return NextResponse.json({ status: "processing", elapsedMs: ageMs }, noStore);
+  return NextResponse.json(
+    { status: "processing", elapsedMs: ageMs, partial: data.result?.partial ?? null },
+    noStore,
+  );
 }

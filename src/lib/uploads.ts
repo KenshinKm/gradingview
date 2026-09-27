@@ -42,6 +42,30 @@ export async function loadPriorMaterialImages(
   return images;
 }
 
+/** Re-loads the photo/PDF pages of a saved attempt's work, in the student's order. */
+export async function loadAttemptWorkImages(attemptId: string): Promise<ImagePart[]> {
+  const admin = createSupabaseAdminClient();
+  const { data: files } = await admin
+    .from("submission_files")
+    .select("storage_path, original_name, mime_type")
+    .eq("grading_attempt_id", attemptId)
+    .eq("role", "work")
+    .order("sort_order", { ascending: true });
+
+  const images: ImagePart[] = [];
+  for (const f of files ?? []) {
+    const { data: blob } = await admin.storage.from(supabaseEnv.bucket).download(f.storage_path);
+    if (!blob) continue;
+    const extracted = await extractFromBuffer(
+      Buffer.from(await blob.arrayBuffer()),
+      f.original_name,
+      f.mime_type,
+    );
+    if (extracted.image) images.push(extracted.image);
+  }
+  return images;
+}
+
 export interface ProcessedUpload {
   fileId: string;
   role: FileRole;

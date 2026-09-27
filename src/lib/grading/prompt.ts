@@ -113,15 +113,9 @@ Per-field length limits:
 ============================================================
 OUTPUT
 ============================================================
-Respond with ONLY a single JSON object (no markdown fences, no prose):
+Respond with ONLY a single JSON object (no markdown fences, no prose). Write the keys in EXACTLY this order, because the student watches the answer appear as you write it and the overall grade comes last:
 {
-  "score": number (0-100, overall percentage),
-  "letter_grade": string (e.g. "B"),
-  "estimated_range_low": number (0-100),
-  "estimated_range_high": number (0-100),
-  "scoring_basis": "rubric" | "answer_key" | "ai_inferred" | "mixed",
-  "inferred_rubric": boolean,
-  "grading_basis_note": string (ONE short sentence or ""),
+  "understood": { "subject": string, "level": string ("High school" or "College"), "topic": string, "assignment": string (e.g. "10-question quiz" or "Essay, MLA"), "graded_on": string (what the grade is based on, e.g. "Your rubric, 100 points" or "Equal points per question, assumed") },
   "sections": [
     { "name": string, "kind": string, "points_earned": number, "points_possible": number, "scoring_basis": "rubric" | "answer_key" | "ai_inferred", "feedback": string (1-2 sentences) }
   ],
@@ -133,9 +127,15 @@ Respond with ONLY a single JSON object (no markdown fences, no prose):
   ],
   "strengths": [ { "title": string, "explanation": string (1 sentence) } ],
   "grammar_or_citation_issues": [ { "type": string, "location": string, "explanation": string (1 short sentence) } ],
-  "overall_feedback": string (2-4 sentences),
-  "understood": { "subject": string, "level": string ("High school" or "College"), "topic": string, "assignment": string (e.g. "10-question quiz" or "Essay, MLA"), "graded_on": string (what the grade is based on, e.g. "Your rubric, 100 points" or "Equal points per question, assumed") },
   "needs_check": [ { "location": string, "reason": string (1 short sentence) } ],
+  "scoring_basis": "rubric" | "answer_key" | "ai_inferred" | "mixed",
+  "inferred_rubric": boolean,
+  "grading_basis_note": string (ONE short sentence or ""),
+  "overall_feedback": string (2-4 sentences),
+  "score": number (0-100, overall percentage),
+  "letter_grade": string (e.g. "B"),
+  "estimated_range_low": number (0-100),
+  "estimated_range_high": number (0-100),
   "disclaimer": "${DISCLAIMER}"
 }
 
@@ -143,7 +143,7 @@ Respond with ONLY a single JSON object (no markdown fences, no prose):
 
 const CALC_CHECKS_RULES = `
 CALCULATION CHECKS (extra output field "calc_checks")
-- Add a top-level "calc_checks" array to the JSON. The server will recompute each entry with real arithmetic and flag any disagreement, so write each one carefully.
+- Add a top-level "calc_checks" array to the JSON, right after "needs_check". The server will recompute each entry with real arithmetic and flag any disagreement, so write each one carefully.
 - Include up to 10 of the most important numeric calculations (final numeric answers, key intermediate values). Skip anything that is not plain arithmetic.
 - Each entry: { "location": string (for example "Question 5"), "what": string (a few words), "expression": string, "claimed_correct": number, "student_answer": number or null }
 - "expression" computes the CORRECT answer from the problem's given values, written with numbers only: + - * / ^ ( ) and sqrt, abs, ln, log10, exp, sin, cos, tan, pi. No variables, no units, no implicit multiplication (write 2*(3+4), not 2(3+4)). Use degrees-to-radians conversion inside the expression when needed.

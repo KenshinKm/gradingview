@@ -4,6 +4,7 @@ import { recordUsage, type Entitlement } from "@/lib/entitlements";
 import { track } from "@/lib/analytics";
 import { gradeSubmission, type GradeSubmissionArgs } from "./service";
 import { GRADE_TIMEOUT_MS } from "./timing";
+import { isEmptyPartial, parsePartial, partialSignature } from "./partial";
 import { costThresholdsFromEnv, evaluateCost, monthStartIso, sumCosts } from "@/lib/cost-watch";
 import { ContextMismatchError, UnreadableImageError } from "./normalize";
 
@@ -40,8 +41,13 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
  */
 export async function runGradingJob(p: GradingJobParams): Promise<void> {
   const admin = createSupabaseAdminClient();
+  const live = livePartialWriter(p.attemptId);
   try {
-    const { result } = await withTimeout(gradeSubmission(p.grade), GRADE_TIMEOUT_MS);
+    const { result } = await withTimeout(
+      gradeSubmission({ ...p.grade, onText: live.onText }),
+      GRADE_TIMEOUT_MS,
+    );
+    live.stop();
 
     const { error: saveError } = await admin
       .from("grading_attempts")
@@ -67,11 +73,13 @@ export async function runGradingJob(p: GradingJobParams): Promise<void> {
     track("grading_completed", { draft: p.draftNumber, score: result.score });
     if (p.entitlement.plan === "free") track("free_grade_used");
   } catch (err) {
+    live.stop();
     // The work clearly doesn't match: ask, do NOT charge. Details go in `result`
     // so the form (or a returning student) can show the right prompt.
     if (err instanceof ContextMismatchError) {
       await fail(p.attemptId, err.studentMessage, {
-        blocked: { code: "context_mismatch", mismatch: err.mismatch },
+        // `retry` lets the student confirm and grade again without re-uploading.
+        blocked: { code: "context_mismatch", mismatch: err.mismatch, retry: retryParams(p) },
       });
       return;
     }
@@ -89,6 +97,62 @@ export async function runGradingJob(p: GradingJobParams): Promise<void> {
       (err as Error).message,
     );
   }
+}
+
+/** Everything needed to run the same grade again after the student confirms. */
+function retryParams(p: GradingJobParams) {
+  const g = p.grade;
+  return {
+    subject: g.subject ?? "english",
+    level: g.level ?? "unspecified",
+    options: g.options ?? {},
+    title: g.assignmentTitle ?? null,
+    course: g.course ?? null,
+    citationStyle: g.citationStyle ?? null,
+  };
+}
+
+/**
+ * Saves what the model has written so far onto the attempt (at most every
+ * ~1.2s, only when something new is complete) so the results page can show it.
+ * Writes never block grading and only apply while the attempt is processing.
+ */
+function livePartialWriter(attemptId: string) {
+  const admin = createSupabaseAdminClient();
+  let lastAt = 0;
+  let lastSig = "";
+  let inFlight = false;
+  let stopped = false;
+
+  function onText(text: string) {
+    const now = Date.now();
+    if (stopped || inFlight || now - lastAt < 1200) return;
+    const partial = parsePartial(text);
+    if (isEmptyPartial(partial)) return;
+    const sig = partialSignature(partial);
+    if (sig === lastSig) return;
+    lastAt = now;
+    lastSig = sig;
+    inFlight = true;
+    void Promise.resolve(
+      admin
+        .from("grading_attempts")
+        .update({ result: { partial } })
+        .eq("id", attemptId)
+        .eq("status", "processing"),
+    )
+      .catch(() => {})
+      .finally(() => {
+        inFlight = false;
+      });
+  }
+
+  return {
+    onText,
+    stop() {
+      stopped = true;
+    },
+  };
 }
 
 /** Logs a "[cost-alert]" line when this grade or the student's month is unusually expensive. */

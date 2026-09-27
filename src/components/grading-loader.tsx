@@ -40,9 +40,12 @@ const USUALLY: Record<Subject, string> = {
 export function GradingLoader({
   subject = "english",
   attemptId = null,
+  uploading = false,
 }: {
   subject?: Subject;
   attemptId?: string | null;
+  /** True while files are still being sent, before grading starts. */
+  uploading?: boolean;
 }) {
   const [i, setI] = useState(0);
   const [seconds, setSeconds] = useState(0);
@@ -65,7 +68,11 @@ export function GradingLoader({
     <div className="card flex flex-col items-center justify-center gap-4 py-16 text-center">
       <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-line border-t-brand-600" />
       <p className="text-sm font-medium text-ink-soft">
-        {slow ? "Still working. Longer work takes a bit more time." : messages[i]}
+        {uploading && seconds < 8
+          ? "Uploading your files…"
+          : slow
+            ? "Still working. Longer work takes a bit more time."
+            : messages[i]}
       </p>
       <p className="max-w-xs text-xs text-ink-muted">{USUALLY[subject]}</p>
       {seconds >= 15 && attemptId && (
