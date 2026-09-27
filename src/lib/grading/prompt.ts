@@ -1,12 +1,15 @@
 import { DISCLAIMER } from "./schema";
 import { LEVEL_LABEL, SUBJECT_LABEL, type Level, type Subject } from "./subjects";
 import { optionsPromptLines, type GradeOptions } from "./options";
+import { workTypeLabel } from "@/lib/subject-config";
 
 export interface GradingInput {
   gradingMaterialsText: string;
   workText: string;
   assignmentTitle?: string | null;
   course?: string | null;
+  /** Raw "type of work" code the student selected (e.g. "lab_report"), resolved to a label for this subject. */
+  workType?: string | null;
   citationStyle?: string | null;
   /** Count of grading-material images attached separately. */
   materialImageCount?: number;
@@ -231,6 +234,8 @@ export function buildUserPrompt(input: GradingInput): string {
   meta.push(...optionsPromptLines(input.options));
   if (input.assignmentTitle) meta.push(`Assignment title: ${input.assignmentTitle}`);
   if (input.course) meta.push(`Course / subject: ${input.course}`);
+  const workTypeText = workTypeLabel(input.subject ?? "english", input.workType);
+  if (workTypeText) meta.push(`Type of work (student-selected): ${workTypeText}`);
   if (input.citationStyle === "not_required")
     meta.push(
       "Citations/sources (student-selected): not required for this assignment. Do NOT deduct for missing citations, sources, a bibliography or Works Cited page, or citation formatting, UNLESS the grading materials themselves explicitly require it. If the grading materials clearly require it, follow the grading materials instead.",

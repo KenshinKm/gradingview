@@ -108,6 +108,7 @@ function retryParams(p: GradingJobParams) {
     options: g.options ?? {},
     title: g.assignmentTitle ?? null,
     course: g.course ?? null,
+    workType: g.workType ?? null,
     citationStyle: g.citationStyle ?? null,
   };
 }

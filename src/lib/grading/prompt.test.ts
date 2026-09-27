@@ -107,6 +107,19 @@ describe("transparent self-chosen weighting", () => {
   });
 });
 
+describe("work type in the user prompt", () => {
+  const base = { gradingMaterialsText: "Rubric text", workText: "My essay" };
+  it("includes the resolved label for the subject", () => {
+    const u = buildUserPrompt({ ...base, subject: "science", workType: "lab_report" });
+    expect(u).toContain("Type of work (student-selected): Lab report");
+  });
+  it("says nothing when unspecified or unknown for that subject", () => {
+    expect(buildUserPrompt({ ...base, subject: "english", workType: "unspecified" })).not.toContain("Type of work");
+    expect(buildUserPrompt({ ...base, subject: "english", workType: "lab_report" })).not.toContain("Type of work");
+    expect(buildUserPrompt(base)).not.toContain("Type of work");
+  });
+});
+
 describe("English citation rules", () => {
   it("warns against flagging valid style variation as an error", () => {
     const p = buildSystemPrompt("english");

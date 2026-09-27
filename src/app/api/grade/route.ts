@@ -339,6 +339,7 @@ export async function POST(req: NextRequest) {
         workText,
         assignmentTitle: title,
         course,
+        workType,
         citationStyle,
         materialImages,
         workImages,

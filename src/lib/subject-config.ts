@@ -27,7 +27,11 @@ export interface SubjectConfig {
   teaser: Array<{ title: string; location: string; why: string; fix: string }>;
   fields: { topic: boolean; totalPoints: boolean; citation: boolean };
   toggles: Array<{ key: OptionKey; label: string }>;
+  /** "Type of work" dropdown options for this subject. First entry is always the "unspecified" default. */
+  workTypes: Array<[value: string, label: string]>;
 }
+
+const UNSPECIFIED: [string, string] = ["unspecified", "Not sure / mixed"];
 
 const HINT = "PDF · DOCX · TXT · JPG · PNG · HEIC, multiple files & photos";
 
@@ -90,6 +94,14 @@ export const SUBJECT_CONFIG: Record<Subject, SubjectConfig> = {
     ],
     fields: { topic: false, totalPoints: false, citation: true },
     toggles: [],
+    workTypes: [
+      UNSPECIFIED,
+      ["essay", "Essay"],
+      ["written_assignment", "Written assignment"],
+      ["short_answer", "Short answer"],
+      ["long_answer", "Long answer"],
+      ["research_paper", "Research paper"],
+    ],
   },
 
   math: {
@@ -155,6 +167,15 @@ export const SUBJECT_CONFIG: Record<Subject, SubjectConfig> = {
       { key: "partialCredit", label: "Give partial credit for correct methods" },
       { key: "calculatorAllowed", label: "Calculator allowed" },
     ],
+    workTypes: [
+      UNSPECIFIED,
+      ["homework", "Homework"],
+      ["worksheet", "Worksheet"],
+      ["quiz", "Quiz"],
+      ["test", "Test / exam"],
+      ["practice_test", "Practice test"],
+      ["word_problems", "Word problems"],
+    ],
   },
 
   science: {
@@ -218,6 +239,15 @@ export const SUBJECT_CONFIG: Record<Subject, SubjectConfig> = {
       { key: "checkUnits", label: "Check units and significant figures" },
       { key: "checkCalculations", label: "Check calculations" },
     ],
+    workTypes: [
+      UNSPECIFIED,
+      ["lab_report", "Lab report"],
+      ["problem_set", "Problem set"],
+      ["worksheet", "Worksheet"],
+      ["quiz", "Quiz"],
+      ["test", "Test / exam"],
+      ["short_answer", "Short answer"],
+    ],
   },
 };
 
@@ -242,6 +272,13 @@ export function enabledSubjects(): Subject[] {
 
 export function isSubjectEnabled(subject: Subject): boolean {
   return enabledSubjects().includes(subject);
+}
+
+/** Human label for a "Type of work" code, or null when unspecified/unknown. */
+export function workTypeLabel(subject: Subject, code: string | null | undefined): string | null {
+  if (!code || code === "unspecified") return null;
+  const found = SUBJECT_CONFIG[subject].workTypes.find(([v]) => v === code);
+  return found ? found[1] : null;
 }
 
 /** Beta reports go to support by email until there is an in-app report flow. */

@@ -20,6 +20,7 @@ interface Retry {
   title?: string | null;
   course?: string | null;
   citationStyle?: string | null;
+  workType?: string | null;
 }
 
 /**
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
 
   const { data: assignment } = await admin
     .from("assignments")
-    .select("grading_materials_text, title, course, citation_style")
+    .select("grading_materials_text, title, course, citation_style, work_type")
     .eq("id", attempt.assignment_id)
     .single();
 
@@ -118,6 +119,7 @@ export async function POST(req: NextRequest) {
         workText: attempt.work_text ?? "",
         assignmentTitle: retry.title ?? assignment?.title ?? null,
         course: retry.course ?? assignment?.course ?? null,
+        workType: retry.workType ?? assignment?.work_type ?? null,
         citationStyle: retry.citationStyle ?? assignment?.citation_style ?? null,
         materialImages,
         workImages,

@@ -55,18 +55,6 @@ function PhotoTip({ text }: { text: string }) {
   );
 }
 
-const WORK_TYPES = [
-  ["unspecified", "Not sure / mixed"],
-  ["essay", "Essay"],
-  ["written_assignment", "Written assignment"],
-  ["worksheet", "Worksheet"],
-  ["practice_test", "Practice test"],
-  ["quiz", "Quiz"],
-  ["multiple_choice", "Multiple choice"],
-  ["short_answer", "Short answer"],
-  ["long_answer", "Long answer"],
-] as const;
-
 function Pill({ kind }: { kind: "optional" | "required" }) {
   return (
     <span
@@ -462,7 +450,7 @@ export function GradeForm({
                 onChange={(e) => setWorkType(e.target.value)}
                 disabled={!!regrade}
               >
-                {WORK_TYPES.map(([v, l]) => (
+                {cfg.workTypes.map(([v, l]) => (
                   <option key={v} value={v}>
                     {l}
                   </option>
