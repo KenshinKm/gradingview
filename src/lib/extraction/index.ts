@@ -134,9 +134,41 @@ export async function extractFromBuffer(
   }
 }
 
+/** Rough page count from the raw bytes, for PDFs the parser can't open. */
+export function countPdfPages(buffer: Buffer): number {
+  const matches = buffer.toString("latin1").match(/\/Type\s*\/Page(?![a-zA-Z])/g);
+  return matches ? matches.length : 1;
+}
+
+/**
+ * When we can't pull text out of a PDF (damaged index, or a scan that is only
+ * pictures), hand the PDF itself to the model, which reads PDFs natively.
+ */
+function pdfAsDocument(buffer: Buffer): ExtractionResult {
+  const pages = countPdfPages(buffer);
+  if (pages > limits.maxPdfPages) {
+    return {
+      text: "",
+      status: "failed",
+      error: `This PDF has about ${pages} pages; the limit is ${limits.maxPdfPages}.`,
+    };
+  }
+  return {
+    text: "",
+    image: { mediaType: "application/pdf", base64: buffer.toString("base64") },
+    status: "extracted",
+  };
+}
+
 async function extractPdf(buffer: Buffer): Promise<ExtractionResult> {
-  const pdfParse = (await import("pdf-parse")).default;
-  const data = await pdfParse(buffer);
+  let data: { numpages: number; text: string };
+  try {
+    const pdfParse = (await import("pdf-parse")).default;
+    data = await pdfParse(buffer);
+  } catch {
+    // e.g. "bad XRef entry": common with scanned or app-exported PDFs.
+    return pdfAsDocument(buffer);
+  }
   if (data.numpages > limits.maxPdfPages) {
     return {
       text: "",
@@ -146,12 +178,8 @@ async function extractPdf(buffer: Buffer): Promise<ExtractionResult> {
   }
   const text = (data.text || "").replace(/\n{3,}/g, "\n\n").trim();
   if (text.length < 20) {
-    return {
-      text: "",
-      status: "failed",
-      error:
-        "We couldn't extract text from this PDF. It may be a scan — try uploading photos/screenshots of the pages instead.",
-    };
+    // Probably a scan with no text layer.
+    return pdfAsDocument(buffer);
   }
   return { text, status: "extracted" };
 }

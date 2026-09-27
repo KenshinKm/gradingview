@@ -4,7 +4,8 @@ import OpenAI from "openai";
 import { llmEnv } from "@/lib/env";
 
 export interface ImagePart {
-  mediaType: string; // e.g. "image/png"
+  /** e.g. "image/png". "application/pdf" is sent to the model as a document. */
+  mediaType: string;
   base64: string;
   /** Optional caption inserted before the image so the model knows its role/order. */
   label?: string;
@@ -58,6 +59,13 @@ async function callAnthropic(req: LlmRequest, model: string): Promise<LlmRespons
   ];
   for (const img of req.images ?? []) {
     if (img.label) content.push({ type: "text", text: img.label });
+    if (img.mediaType === "application/pdf") {
+      content.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: img.base64 },
+      });
+      continue;
+    }
     content.push({
       type: "image",
       source: {
@@ -101,6 +109,8 @@ async function callOpenAi(req: LlmRequest, model: string): Promise<LlmResponse> 
     { type: "text", text: req.user },
   ];
   for (const img of req.images ?? []) {
+    // The OpenAI path can't read PDFs directly.
+    if (img.mediaType === "application/pdf") continue;
     if (img.label) userContent.push({ type: "text", text: img.label });
     userContent.push({
       type: "image_url",

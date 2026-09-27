@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
 
   if (fileErrors.length > 0) {
     return NextResponse.json(
-      { error: fileErrors.join(" "), code: "extraction_failed" },
+      { error: [...new Set(fileErrors)].join(" "), code: "extraction_failed" },
       { status: 422 },
     );
   }
