@@ -37,9 +37,30 @@ export function AuthPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [forgot, setForgot] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   const supabase = createSupabaseBrowserClient();
   const emailRedirect = `${SITE_URL}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+  const resetRedirect = `${SITE_URL}/auth/callback?next=${encodeURIComponent("/auth/reset-password")}`;
+
+  async function submitForgot(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: resetRedirect,
+      });
+      if (error) throw error;
+      track("password_reset_requested");
+      setForgotSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -114,6 +135,77 @@ export function AuthPanel({
     }
   }
 
+  if (forgotSent) {
+    return (
+      <div className="text-center">
+        <h2 className="text-lg font-semibold text-ink">Check your email</h2>
+        <p className="mt-2 text-sm text-ink-soft">
+          If there&apos;s an account for <strong className="text-ink">{email}</strong>,
+          we sent a link to reset your password.
+        </p>
+        <button
+          className="btn-ghost mt-4"
+          onClick={() => {
+            setForgot(false);
+            setForgotSent(false);
+            setError(null);
+          }}
+        >
+          Back to log in
+        </button>
+      </div>
+    );
+  }
+
+  if (forgot) {
+    return (
+      <form onSubmit={submitForgot} className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-ink">Reset your password</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Enter your email and we&apos;ll send you a link to set a new password.
+          </p>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="forgot-email">
+            Email
+          </label>
+          <input
+            id="forgot-email"
+            type="email"
+            required
+            autoComplete="email"
+            className="input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        {error && (
+          <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+            {error}
+          </p>
+        )}
+
+        <button type="submit" className="btn-primary w-full" disabled={busy}>
+          {busy ? "Please wait…" : "Send reset link"}
+        </button>
+
+        <button
+          type="button"
+          className="w-full text-center text-sm text-ink-muted hover:text-ink"
+          onClick={() => {
+            setForgot(false);
+            setError(null);
+          }}
+        >
+          Back to log in
+        </button>
+      </form>
+    );
+  }
+
   if (sent) {
     return (
       <div className="text-center">
@@ -164,9 +256,23 @@ export function AuthPanel({
 
       {method === "password" && (
         <div>
-          <label className="label" htmlFor="auth-password">
-            Password
-          </label>
+          <div className="flex items-baseline justify-between">
+            <label className="label" htmlFor="auth-password">
+              Password
+            </label>
+            {mode === "login" && (
+              <button
+                type="button"
+                className="mb-1.5 text-xs text-ink-muted hover:text-ink"
+                onClick={() => {
+                  setForgot(true);
+                  setError(null);
+                }}
+              >
+                Forgot password?
+              </button>
+            )}
+          </div>
           <input
             id="auth-password"
             type="password"

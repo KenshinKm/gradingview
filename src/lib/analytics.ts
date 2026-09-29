@@ -15,7 +15,9 @@ export type AnalyticsEvent =
   | "paywall_viewed"
   | "checkout_started"
   | "subscription_started"
-  | "assignment_deleted";
+  | "assignment_deleted"
+  | "password_reset_requested"
+  | "password_reset_completed";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 
