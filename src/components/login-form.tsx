@@ -14,7 +14,9 @@ export function LoginForm() {
     <div className="card">
       {hasAuthError && (
         <p className="mb-4 rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
-          That link expired or was already used. Try again below.
+          That link couldn&apos;t sign you in here. If you were confirming your email, try
+          logging in below with your password. For a password reset or magic link, request
+          a new one and open it on this device.
         </p>
       )}
       <AuthPanel
