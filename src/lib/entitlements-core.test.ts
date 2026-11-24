@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { computeEntitlement, type EntitlementInputs } from "./entitlements-core";
-import { PLANS } from "./plans";
+import { PLANS, FREE_GRADES_TEMPORARY, BASE_FREE_GRADE_LIMIT, TEMP_FREE_GRADE_LIMIT } from "./plans";
+
+const FREE = PLANS.free.gradeLimit;
 
 const base: EntitlementInputs = {
   devBypass: false,
@@ -14,8 +16,12 @@ const base: EntitlementInputs = {
 };
 
 describe("plan limits come from PLANS (single source of truth)", () => {
-  it("Student = 15, Student Plus = 30, Free = 3", () => {
-    expect(PLANS.free.gradeLimit).toBe(3);
+  it("Student = 15, Student Plus = 30, Free follows the temporary switch", () => {
+    expect(PLANS.free.gradeLimit).toBe(
+      FREE_GRADES_TEMPORARY ? TEMP_FREE_GRADE_LIMIT : BASE_FREE_GRADE_LIMIT,
+    );
+    expect(TEMP_FREE_GRADE_LIMIT).toBe(10);
+    expect(BASE_FREE_GRADE_LIMIT).toBe(3);
     expect(PLANS.student.gradeLimit).toBe(15);
     expect(PLANS.student_plus.gradeLimit).toBe(30);
   });
@@ -28,26 +34,33 @@ describe("free lifetime credit", () => {
     expect(d.limitScope).toBe("lifetime");
     expect(d.canGrade).toBe(true);
     expect(d.used).toBe(0);
-    expect(d.remaining).toBe(3);
+    expect(d.remaining).toBe(FREE);
   });
 
-  it("allows the second and third free grades", () => {
-    expect(computeEntitlement({ ...base, freeUsed: 1 }).canGrade).toBe(true);
-    expect(computeEntitlement({ ...base, freeUsed: 1 }).remaining).toBe(2);
-    expect(computeEntitlement({ ...base, freeUsed: 2 }).canGrade).toBe(true);
-    expect(computeEntitlement({ ...base, freeUsed: 2 }).remaining).toBe(1);
+  it("keeps allowing grades until the last free one is used", () => {
+    expect(computeEntitlement({ ...base, freeUsed: 1 }).remaining).toBe(FREE - 1);
+    expect(computeEntitlement({ ...base, freeUsed: FREE - 1 }).canGrade).toBe(true);
+    expect(computeEntitlement({ ...base, freeUsed: FREE - 1 }).remaining).toBe(1);
+  });
+
+  it("someone who already used the old 3 free grades still has the rest", () => {
+    // Only meaningful while the temporary allowance is on.
+    if (!FREE_GRADES_TEMPORARY) return;
+    const d = computeEntitlement({ ...base, freeUsed: BASE_FREE_GRADE_LIMIT });
+    expect(d.canGrade).toBe(true);
+    expect(d.remaining).toBe(TEMP_FREE_GRADE_LIMIT - BASE_FREE_GRADE_LIMIT);
   });
 
   it("blocks after all free grades are used", () => {
-    const d = computeEntitlement({ ...base, freeUsed: 3 });
+    const d = computeEntitlement({ ...base, freeUsed: FREE });
     expect(d.canGrade).toBe(false);
     expect(d.blockReason).toBe("free_grade_used");
-    expect(d.used).toBe(3);
+    expect(d.used).toBe(FREE);
     expect(d.remaining).toBe(0);
   });
 
   it("never goes negative", () => {
-    const d = computeEntitlement({ ...base, freeUsed: 5 });
+    const d = computeEntitlement({ ...base, freeUsed: FREE + 5 });
     expect(d.remaining).toBe(0);
   });
 });
@@ -112,7 +125,7 @@ describe("inactive / canceled subscription", () => {
       ...base,
       subPlan: "student",
       subActive: false,
-      freeUsed: 3,
+      freeUsed: FREE,
     });
     expect(d.plan).toBe("free");
     expect(d.canGrade).toBe(false);
@@ -125,11 +138,11 @@ describe("Stripe not configured yet (launch without billing)", () => {
     const d = computeEntitlement({ ...base, billingReady: false, freeUsed: 0 });
     expect(d.plan).toBe("free");
     expect(d.canGrade).toBe(true);
-    expect(d.remaining).toBe(3);
+    expect(d.remaining).toBe(FREE);
   });
 
   it("blocks once all free grades are spent — paid plans unreachable", () => {
-    const d = computeEntitlement({ ...base, billingReady: false, freeUsed: 3 });
+    const d = computeEntitlement({ ...base, billingReady: false, freeUsed: FREE });
     expect(d.canGrade).toBe(false);
     expect(d.blockReason).toBe("billing_not_configured");
   });
@@ -163,9 +176,9 @@ describe("dev bypass", () => {
   });
 
   it("still reports honest usage numbers for the meter", () => {
-    const d = computeEntitlement({ ...base, devBypass: true, freeUsed: 3 });
-    expect(d.used).toBe(3);
-    expect(d.limit).toBe(3);
+    const d = computeEntitlement({ ...base, devBypass: true, freeUsed: FREE });
+    expect(d.used).toBe(FREE);
+    expect(d.limit).toBe(FREE);
     expect(d.remaining).toBe(0);
     expect(d.canGrade).toBe(true); // not enforced in dev
   });

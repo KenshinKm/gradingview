@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AuthPanel } from "@/components/auth-panel";
+import { TemporaryBadge } from "@/components/temporary-badge";
+import { PLANS } from "@/lib/plans";
 
 export function AuthModal({
   open,
@@ -59,8 +61,9 @@ export function AuthModal({
             Create your free account to see your grade
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Your first 3 grades are free. No card required. We&apos;ll pick up
-            right where you left off — nothing to re-upload.
+            Your first {PLANS.free.gradeLimit} grades are free. No card required.{" "}
+            <TemporaryBadge /> We&apos;ll pick up right where you left off, nothing
+            to re-upload.
           </p>
         </div>
         <AuthPanel defaultMode="signup" redirectTo={redirectTo} onAuthed={onAuthed} />

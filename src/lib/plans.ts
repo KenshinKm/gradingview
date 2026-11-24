@@ -12,6 +12,21 @@ export interface Plan {
 }
 
 /**
+ * TEMPORARY testing allowance. While true, every account gets
+ * TEMP_FREE_GRADE_LIMIT free lifetime grades instead of the normal
+ * BASE_FREE_GRADE_LIMIT, and the UI shows a "Temporary" badge next to the
+ * number. To end the promo, set this to false and redeploy: the limit drops
+ * back to the base value everywhere (pricing, dashboard, paywalls, the
+ * per-network cap, and entitlement checks all derive from it).
+ */
+export const FREE_GRADES_TEMPORARY = true;
+export const BASE_FREE_GRADE_LIMIT = 3;
+export const TEMP_FREE_GRADE_LIMIT = 10;
+const FREE_GRADE_LIMIT = FREE_GRADES_TEMPORARY
+  ? TEMP_FREE_GRADE_LIMIT
+  : BASE_FREE_GRADE_LIMIT;
+
+/**
  * Single source of truth for plan limits. Change a `gradeLimit` here and it
  * propagates to the pricing UI, dashboard usage meter, entitlement logic,
  * paywalls, and tests — nothing else hardcodes these numbers.
@@ -22,10 +37,10 @@ export const PLANS: Record<PlanId, Plan> = {
     name: "Free",
     priceLabel: "$0",
     priceCents: 0,
-    gradeLimit: 3,
+    gradeLimit: FREE_GRADE_LIMIT,
     limitScope: "lifetime",
     features: [
-      "3 lifetime full grades",
+      `${FREE_GRADE_LIMIT} lifetime full grades`,
       "Complete grading result",
       "Full rubric / breakdown",
       "Fixes, strengths, and feedback",

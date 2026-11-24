@@ -5,6 +5,7 @@ import { PaywallBanner } from "@/components/paywall-banner";
 import { PLANS } from "@/lib/plans";
 import { getSessionUser } from "@/lib/supabase/server";
 import { DEV_BILLING_BYPASS, stripeConfigured } from "@/lib/env";
+import { TemporaryBadge } from "@/components/temporary-badge";
 
 export const metadata = { title: "Pricing" };
 
@@ -66,6 +67,7 @@ export default async function PricingPage({
                   {plan.limitScope === "lifetime"
                     ? `${plan.gradeLimit} lifetime full grade${plan.gradeLimit === 1 ? "" : "s"}`
                     : `${plan.gradeLimit} grading attempts / billing period`}
+                  {id === "free" && <TemporaryBadge className="ml-1.5" />}
                 </p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm text-ink-soft">
                   {plan.features.map((f) => (

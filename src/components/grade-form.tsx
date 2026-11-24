@@ -11,6 +11,8 @@ import { limitsFor } from "@/lib/upload-limits";
 import { MAX_REQUEST_BYTES, formatMb, requestBytes, shrinkPhoto } from "@/lib/client-image";
 import type { Level, Subject } from "@/lib/grading/subjects";
 import { SUBJECT_CONFIG, type OptionKey } from "@/lib/subject-config";
+import { TemporaryBadge } from "@/components/temporary-badge";
+import { PLANS } from "@/lib/plans";
 
 // The auth modal (and its Supabase client) only loads if an unauthenticated
 // visitor actually tries to grade — keeps it out of the initial bundle.
@@ -549,7 +551,12 @@ export function GradeForm({
               ? `Add ${!hasMaterials && !materialsOptional ? "grading materials" : ""}${
                   !hasMaterials && !materialsOptional && !hasWork ? " and " : ""
                 }${hasWork ? "" : "your work"} to continue.`
-              : "Your first 3 grades are free. No card required."}
+              : (
+                <>
+                  Your first {PLANS.free.gradeLimit} grades are free. No card required.{" "}
+                  <TemporaryBadge />
+                </>
+              )}
           </p>
         </div>
       </form>

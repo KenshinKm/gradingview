@@ -5,6 +5,8 @@ import { GradeForm } from "@/components/grade-form";
 import { HowItWorks } from "@/components/how-it-works";
 import { SUBJECT_CONFIG, REPORT_EMAIL } from "@/lib/subject-config";
 import type { Subject } from "@/lib/grading/subjects";
+import { TemporaryBadge } from "@/components/temporary-badge";
+import { PLANS } from "@/lib/plans";
 
 function SubjectName({ subject }: { subject: Subject }) {
   const c = SUBJECT_CONFIG[subject];
@@ -69,7 +71,10 @@ export function SubjectPage({ subject }: { subject: Subject }) {
 
             <div className="mt-6 flex items-center gap-2 text-[11px] text-ink-muted sm:text-sm">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-grade-a" />
-              Your first 3 grades are free. No card required.
+              <span>
+                Your first {PLANS.free.gradeLimit} grades are free. No card required.{" "}
+                <TemporaryBadge />
+              </span>
             </div>
 
             <dl className="mt-8 grid max-w-md grid-cols-3 gap-4 border-t border-line pt-6">

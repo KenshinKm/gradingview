@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Entitlement } from "@/lib/entitlements";
 import { usageFillClass, usagePercent } from "@/lib/usage-meter";
+import { TemporaryBadge } from "@/components/temporary-badge";
 
 /**
  * Visual-only usage meter. The server (`getEntitlement`) is authoritative for
@@ -66,8 +67,9 @@ export function UsageMeter({ entitlement }: { entitlement: Entitlement }) {
         </p>
 
         <p className="text-xs text-ink-muted">
+          {isLifetime && plan === "free" && <TemporaryBadge className="mr-1.5" />}
           {isLifetime
-            ? `${limit} lifetime grades — does not reset`
+            ? `${limit} lifetime grades, does not reset`
             : resetDate
               ? `Resets ${resetDate}`
               : "Resets each billing period"}

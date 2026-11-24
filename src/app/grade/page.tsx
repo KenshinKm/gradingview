@@ -8,6 +8,8 @@ import type { Assignment } from "@/lib/types";
 import { parseLevel, parseSubject } from "@/lib/grading/subjects";
 import { SUBJECT_CONFIG, enabledSubjects, isSubjectEnabled } from "@/lib/subject-config";
 import Link from "next/link";
+import { TemporaryBadge } from "@/components/temporary-badge";
+import { PLANS } from "@/lib/plans";
 
 export const metadata = { title: "Grade My Work" };
 export const dynamic = "force-dynamic";
@@ -74,9 +76,14 @@ export default async function GradePage({
             )}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            {regrade
-              ? "Your grading materials are kept. Just add your revised work below. This counts as one grading attempt."
-              : "Upload how your work will be graded, plus your completed work. Your first 3 grades are free."}
+            {regrade ? (
+              "Your grading materials are kept. Just add your revised work below. This counts as one grading attempt."
+            ) : (
+              <>
+                Upload how your work will be graded, plus your completed work. Your first{" "}
+                {PLANS.free.gradeLimit} grades are free. <TemporaryBadge className="ml-0.5" />
+              </>
+            )}
           </p>
 
           {!regrade && enabledSubjects().length > 1 && (

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { PLANS } from "./plans";
 import {
   FREE_GRADE_IP_LIMIT,
   isFreeGradeIpBlocked,
@@ -31,5 +32,11 @@ describe("isFreeGradeIpBlocked", () => {
 
   it("allows a fresh network (zero prior grades)", () => {
     expect(isFreeGradeIpBlocked({ ipHash: "abc", usedInWindow: 0 })).toBe(false);
+  });
+});
+
+describe("network cap scales with the free allowance", () => {
+  it("is 3x one account's free grades, so a shared network isn't locked out", () => {
+    expect(FREE_GRADE_IP_LIMIT).toBe(PLANS.free.gradeLimit * 3);
   });
 });

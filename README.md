@@ -72,7 +72,7 @@ that section is clearly labeled **AI-inferred** — it never pretends a key exis
 
 ### Usage / entitlement rules (enforced server-side only)
 
-- Every authenticated user gets **3 free lifetime full grades** (complete
+- Every authenticated user gets **free lifetime full grades** (3 normally; temporarily 10 while `FREE_GRADES_TEMPORARY` is on in `src/lib/plans.ts`) (complete
   results, nothing blurred or withheld).
 - **Student** = 15 grading attempts / Stripe billing period. **Student Plus** = 30.
 - Every successful initial grade _or_ re-grade = one attempt.
@@ -93,7 +93,7 @@ that section is clearly labeled **AI-inferred** — it never pretends a key exis
 - **`BILLING_MODE=dev`** (only honored when `NODE_ENV !== "production"`) —
   unlimited local grades, no limits enforced. Use while iterating.
 - **`BILLING_MODE=live`** (the default; forced in production) — real limits:
-  - **Stripe not configured** → the **free tier still works** (3 lifetime grades
+  - **Stripe not configured** → the **free tier still works** (the free lifetime grades
     per user). Paid plans show "coming soon" and checkout is disabled. This is
     the launch-without-Stripe state.
   - **Stripe configured** (`STRIPE_*` env set) → paid plans activate

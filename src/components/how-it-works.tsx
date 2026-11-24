@@ -1,5 +1,7 @@
 import { gradeColors } from "@/lib/grade-colors";
 import { ScrollToFormButton } from "@/components/scroll-to-form-button";
+import { TemporaryBadge } from "@/components/temporary-badge";
+import { PLANS } from "@/lib/plans";
 
 const BEFORE = { letter: "C+", score: 78 };
 const AFTER = { letter: "B+", score: 88 };
@@ -224,7 +226,8 @@ export function HowItWorks() {
             Try it free with your own work
           </ScrollToFormButton>
           <p className="mt-3 text-[12.5px] text-ink-muted">
-            Your first 3 grades are free. No card required.
+            Your first {PLANS.free.gradeLimit} grades are free. No card required.{" "}
+            <TemporaryBadge />
           </p>
           <p className="mx-auto mt-5 max-w-md text-[11px] leading-relaxed text-ink-muted/85">
             Example only. Your results depend on the materials and work you provide.
